@@ -1,1 +1,263 @@
+:root {
+  --crema: #f8f1e8;
+  --crema-claro: #fffaf4;
+  --marron: #4c2d20;
+  --marron-2: #6f442f;
+  --dorado: #c79b43;
+  --dorado-claro: #ead9b5;
+  --gris: #7e746e;
+  --blanco: #ffffff;
+  --error: #a63d3d;
+}
 
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  color: var(--marron);
+}
+
+.login-page {
+  min-height: 100vh;
+  background: var(--crema-claro);
+}
+
+.login-layout {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+}
+
+.login-visual {
+  min-height: 100vh;
+  background:
+    linear-gradient(rgba(80, 50, 35, 0.14), rgba(80, 50, 35, 0.14)),
+    url("https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1400&q=80");
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.visual-overlay {
+  min-height: 100vh;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 247, 238, 0.20),
+    rgba(255, 247, 238, 0.52)
+  );
+}
+
+.marca-grande {
+  position: absolute;
+  top: 42px;
+  left: 55px;
+}
+
+.marca-grande h1,
+.login-marca h2 {
+  margin: 0;
+  font-family: Georgia, serif;
+  letter-spacing: 7px;
+  font-weight: 500;
+}
+
+.marca-grande h1 {
+  font-size: 44px;
+}
+
+.marca-grande p,
+.login-marca p {
+  margin: 5px 0 0;
+  font-family: Georgia, serif;
+}
+
+.destellos,
+.destello {
+  color: var(--dorado);
+}
+
+.frase-principal {
+  font-family: Georgia, serif;
+  font-size: 58px;
+  font-style: italic;
+  line-height: 1.08;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: 40px;
+}
+
+.frase-secundaria {
+  margin-top: 35px;
+  margin-left: auto;
+  margin-right: 80px;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-family: Georgia, serif;
+  font-size: 15px;
+}
+
+.login-panel {
+  min-height: 100vh;
+  padding: 50px 80px 25px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 570px;
+  margin: auto;
+  padding: 38px;
+  background: rgba(255,255,255,0.96);
+  border: 1px solid #eadfd4;
+  border-radius: 18px;
+  box-shadow: 0 15px 40px rgba(76,45,32,.08);
+}
+
+.login-marca {
+  text-align: center;
+  margin-bottom: 34px;
+}
+
+.login-marca h2 {
+  font-size: 38px;
+}
+
+.login-marca p {
+  font-size: 15px;
+}
+
+.bienvenida {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.bienvenida h3 {
+  margin: 0;
+  font-size: 27px;
+}
+
+.bienvenida p {
+  margin-top: 8px;
+  color: var(--gris);
+}
+
+.campo {
+  margin-bottom: 20px;
+}
+
+.campo label {
+  display: block;
+  margin-bottom: 7px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.input-con-icono {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1px solid #d9d1ca;
+  border-radius: 10px;
+  background: white;
+}
+
+.input-con-icono:focus-within {
+  border-color: var(--dorado);
+  box-shadow: 0 0 0 3px rgba(199,155,67,.12);
+}
+
+.input-con-icono input {
+  flex: 1;
+  border: none;
+  outline: none;
+  height: 100%;
+  font-size: 15px;
+  color: var(--marron);
+}
+
+.btn-ojo {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.btn-ingresar {
+  width: 100%;
+  height: 52px;
+  border: none;
+  border-radius: 10px;
+  margin-top: 8px;
+  background: linear-gradient(
+    90deg,
+    var(--marron-2),
+    var(--marron)
+  );
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: .2s;
+}
+
+.btn-ingresar:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 7px 15px rgba(76,45,32,.18);
+}
+
+.mensaje-login {
+  min-height: 20px;
+  color: var(--error);
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.detalle-login {
+  text-align: center;
+  margin-top: 32px;
+  font-family: Georgia, serif;
+  font-style: italic;
+  color: var(--marron-2);
+}
+
+.login-footer {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  color: var(--gris);
+  font-size: 13px;
+  margin-top: 20px;
+}
+
+@media (max-width: 900px) {
+  .login-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .login-visual {
+    display: none;
+  }
+
+  .login-panel {
+    padding: 30px 20px;
+  }
+
+  .login-card {
+    padding: 28px 22px;
+  }
+}
