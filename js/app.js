@@ -1,31 +1,117 @@
-const formLogin = document.getElementById("formLogin");
-const usuarioInput = document.getElementById("usuario");
-const claveInput = document.getElementById("clave");
-const btnMostrarClave = document.getElementById("btnMostrarClave");
-const mensajeLogin = document.getElementById("mensajeLogin");
+const API_URL =
+  "PEGA_AQUI_TU_URL_DE_APPS_SCRIPT";
+
+const formLogin =
+  document.getElementById("formLogin");
+
+const usuarioInput =
+  document.getElementById("usuario");
+
+const claveInput =
+  document.getElementById("clave");
+
+const btnMostrarClave =
+  document.getElementById("btnMostrarClave");
+
+const mensajeLogin =
+  document.getElementById("mensajeLogin");
+
 
 btnMostrarClave.addEventListener("click", () => {
-  const esPassword = claveInput.type === "password";
 
-  claveInput.type = esPassword ? "text" : "password";
-  btnMostrarClave.textContent = esPassword ? "🙈" : "👁";
+  const esPassword =
+    claveInput.type === "password";
+
+  claveInput.type =
+    esPassword ? "text" : "password";
+
+  btnMostrarClave.textContent =
+    esPassword ? "🙈" : "👁";
 });
 
-formLogin.addEventListener("submit", (event) => {
+
+formLogin.addEventListener("submit", async (event) => {
+
   event.preventDefault();
 
-  const usuario = usuarioInput.value.trim();
-  const clave = claveInput.value.trim();
+  const usuario =
+    usuarioInput.value.trim();
+
+  const clave =
+    claveInput.value.trim();
 
   mensajeLogin.textContent = "";
+  mensajeLogin.style.color = "#a63d3d";
+
 
   if (!usuario || !clave) {
+
     mensajeLogin.textContent =
       "Ingresa tu usuario y contraseña.";
+
     return;
   }
 
+
   mensajeLogin.style.color = "#6f442f";
   mensajeLogin.textContent =
-    "Login visual listo. Falta conectar con Google Sheets.";
+    "Validando acceso...";
+
+
+  try {
+
+    const url =
+      `${API_URL}?accion=login` +
+      `&usuario=${encodeURIComponent(usuario)}` +
+      `&clave=${encodeURIComponent(clave)}`;
+
+
+    const respuesta =
+      await fetch(url);
+
+
+    const datos =
+      await respuesta.json();
+
+
+    if (!datos.ok) {
+
+      mensajeLogin.style.color = "#a63d3d";
+
+      mensajeLogin.textContent =
+        datos.mensaje;
+
+      return;
+    }
+
+
+    sessionStorage.setItem(
+      "zareinaUsuario",
+      JSON.stringify(datos.usuario)
+    );
+
+
+    mensajeLogin.style.color = "#6f442f";
+
+    mensajeLogin.textContent =
+      `Bienvenida, ${datos.usuario.nombre}`;
+
+
+    console.log(
+      "Usuario conectado:",
+      datos.usuario
+    );
+
+
+  } catch (error) {
+
+    console.error(error);
+
+    mensajeLogin.style.color = "#a63d3d";
+
+    mensajeLogin.textContent =
+      "No se pudo conectar con el sistema.";
+
+  }
+
 });
