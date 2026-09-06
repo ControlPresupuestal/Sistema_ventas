@@ -74,27 +74,37 @@ formLogin.addEventListener("submit", async (event) => {
       await respuesta.json();
 
 
-    if (!datos.ok) {
+if (!datos.ok) {
 
-      mensajeLogin.style.color = "#a63d3d";
+  mensajeLogin.style.color =
+    "#a63d3d";
 
-      mensajeLogin.textContent =
-        datos.mensaje;
+  mensajeLogin.textContent =
+    datos.mensaje;
 
-      return;
-    }
-
-
-    sessionStorage.setItem(
-      "zareinaUsuario",
-      JSON.stringify(datos.usuario)
-    );
+  return;
+}
 
 
-    mensajeLogin.style.color = "#6f442f";
+sessionStorage.setItem(
+  "zareinaUsuario",
+  JSON.stringify(datos.usuario)
+);
 
-    mensajeLogin.textContent =
-      `Bienvenida, ${datos.usuario.nombre}`;
+
+mensajeLogin.style.color =
+  "#6f442f";
+
+mensajeLogin.textContent =
+  `Bienvenida, ${datos.usuario.nombre}`;
+
+
+setTimeout(() => {
+
+  window.location.href =
+    "dashboard.html";
+
+}, 500);
 
 
     console.log(
