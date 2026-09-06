@@ -3,151 +3,120 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema de Ventas</title>
-
+  <title>ZAREINA | Sistema de Ventas</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 
-<body>
+<body class="login-page">
 
-  <main class="contenedor">
+  <main class="login-layout">
 
-    <header class="cabecera">
-      <div>
-        <h1>Nueva Cotización</h1>
-        <p>Selecciona los productos que desea el cliente</p>
+    <section class="login-visual">
+      <div class="visual-overlay">
+        <div class="marca-grande">
+          <div class="destellos">✦ ✧</div>
+          <h1>ZAREINA</h1>
+          <p>Moda que eleva tu esencia</p>
+        </div>
+
+        <div class="frase-principal">
+          Más que moda,<br>
+          es tu esencia
+        </div>
+
+        <div class="frase-secundaria">
+          Viste momentos, crea historias
+        </div>
       </div>
-    </header>
-
-    <section class="cliente">
-      <label for="cliente">Cliente</label>
-      <input
-        id="cliente"
-        type="text"
-        placeholder="Nombre del cliente">
     </section>
 
-    <section class="selector-productos">
+    <section class="login-panel">
 
-      <div>
-        <label for="producto">Producto</label>
-        <select id="producto">
-          <option value="">Seleccionar</option>
-        </select>
+      <div class="login-card">
+
+        <div class="login-marca">
+          <span class="destello">✦</span>
+          <h2>ZAREINA</h2>
+          <p>Moda que eleva tu esencia</p>
+        </div>
+
+        <div class="bienvenida">
+          <h3>Ingresa a tu cuenta</h3>
+          <p>Accede al sistema de ventas</p>
+        </div>
+
+        <form id="formLogin">
+
+          <div class="campo">
+            <label for="usuario">Usuario</label>
+
+            <div class="input-con-icono">
+              <span>👤</span>
+              <input
+                id="usuario"
+                type="text"
+                autocomplete="username"
+                placeholder="Ingresa tu usuario"
+                required
+              >
+            </div>
+          </div>
+
+          <div class="campo">
+            <label for="clave">Contraseña</label>
+
+            <div class="input-con-icono">
+              <span>🔒</span>
+
+              <input
+                id="clave"
+                type="password"
+                autocomplete="current-password"
+                placeholder="Ingresa tu contraseña"
+                required
+              >
+
+              <button
+                type="button"
+                id="btnMostrarClave"
+                class="btn-ojo"
+                aria-label="Mostrar contraseña"
+              >
+                👁
+              </button>
+            </div>
+          </div>
+
+          <div
+            id="mensajeLogin"
+            class="mensaje-login"
+          ></div>
+
+          <button
+            type="submit"
+            class="btn-ingresar"
+          >
+            Ingresar
+            <span>→</span>
+          </button>
+
+        </form>
+
+        <div class="detalle-login">
+          Pequeños detalles hacen grandes historias ♥
+        </div>
+
       </div>
 
-      <div>
-        <label for="talla">Talla</label>
-        <select id="talla">
-          <option value="">Seleccionar</option>
-        </select>
-      </div>
-
-      <div>
-        <label for="color">Color</label>
-        <select id="color">
-          <option value="">Seleccionar</option>
-        </select>
-
-        <p id="stockTexto" class="stock"></p>
-      </div>
-
-      <div>
-        <label for="cantidad">Cantidad</label>
-        <input
-          id="cantidad"
-          type="number"
-          min="1"
-          value="1">
-      </div>
-
-      <div>
-        <label for="precio">Precio</label>
-        <input
-          id="precio"
-          type="text"
-          disabled>
-      </div>
-
-      <div>
-        <button
-          id="btnAgregar"
-          class="btn btn-principal">
-          + Agregar
-        </button>
-      </div>
-
-    </section>
-
-    <section class="detalle">
-
-      <table>
-
-        <thead>
-          <tr>
-            <th>Producto</th>
-            <th>Talla</th>
-            <th>Color</th>
-            <th>Cantidad</th>
-            <th>Precio</th>
-            <th>Total</th>
-            <th></th>
-          </tr>
-        </thead>
-
-        <tbody id="detalleCotizacion"></tbody>
-
-      </table>
-
-    </section>
-
-    <section class="resumen">
-
-      <div class="fila-resumen">
-        <span>Subtotal</span>
-        <strong>
-          S/ <span id="subtotal">0.00</span>
-        </strong>
-      </div>
-
-      <div class="fila-resumen">
-        <label for="descuento">Descuento</label>
-        <input
-          id="descuento"
-          type="number"
-          min="0"
-          step="0.01"
-          value="0">
-      </div>
-
-      <div class="fila-resumen total">
-        <span>Total</span>
-        <strong>
-          S/ <span id="totalGeneral">0.00</span>
-        </strong>
-      </div>
-
-    </section>
-
-    <section class="acciones">
-
-      <button
-        id="btnLimpiar"
-        class="btn btn-secundario">
-        Limpiar
-      </button>
-
-      <button
-        id="btnGuardar"
-        class="btn btn-principal">
-        Guardar Cotización
-      </button>
+      <footer class="login-footer">
+        <span>@zareina.peru</span>
+        <span>986 796 366</span>
+      </footer>
 
     </section>
 
   </main>
 
   <script src="js/app.js"></script>
-
 </body>
 </html>
