@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Ventas</title>
+
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+
+  <main class="contenedor">
+
+    <header class="cabecera">
+      <div>
+        <h1>Nueva Cotización</h1>
+        <p>Selecciona los productos que desea el cliente</p>
+      </div>
+    </header>
+
+    <section class="cliente">
+      <label for="cliente">Cliente</label>
+      <input
+        id="cliente"
+        type="text"
+        placeholder="Nombre del cliente">
+    </section>
+
+    <section class="selector-productos">
+
+      <div>
+        <label for="producto">Producto</label>
+        <select id="producto">
+          <option value="">Seleccionar</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="talla">Talla</label>
+        <select id="talla">
+          <option value="">Seleccionar</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="color">Color</label>
+        <select id="color">
+          <option value="">Seleccionar</option>
+        </select>
+
+        <p id="stockTexto" class="stock"></p>
+      </div>
+
+      <div>
+        <label for="cantidad">Cantidad</label>
+        <input
+          id="cantidad"
+          type="number"
+          min="1"
+          value="1">
+      </div>
+
+      <div>
+        <label for="precio">Precio</label>
+        <input
+          id="precio"
+          type="text"
+          disabled>
+      </div>
+
+      <div>
+        <button
+          id="btnAgregar"
+          class="btn btn-principal">
+          + Agregar
+        </button>
+      </div>
+
+    </section>
+
+    <section class="detalle">
+
+      <table>
+
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Talla</th>
+            <th>Color</th>
+            <th>Cantidad</th>
+            <th>Precio</th>
+            <th>Total</th>
+            <th></th>
+          </tr>
+        </thead>
+
+        <tbody id="detalleCotizacion"></tbody>
+
+      </table>
+
+    </section>
+
+    <section class="resumen">
+
+      <div class="fila-resumen">
+        <span>Subtotal</span>
+        <strong>
+          S/ <span id="subtotal">0.00</span>
+        </strong>
+      </div>
+
+      <div class="fila-resumen">
+        <label for="descuento">Descuento</label>
+        <input
+          id="descuento"
+          type="number"
+          min="0"
+          step="0.01"
+          value="0">
+      </div>
+
+      <div class="fila-resumen total">
+        <span>Total</span>
+        <strong>
+          S/ <span id="totalGeneral">0.00</span>
+        </strong>
+      </div>
+
+    </section>
+
+    <section class="acciones">
+
+      <button
+        id="btnLimpiar"
+        class="btn btn-secundario">
+        Limpiar
+      </button>
+
+      <button
+        id="btnGuardar"
+        class="btn btn-principal">
+        Guardar Cotización
+      </button>
+
+    </section>
+
+  </main>
+
+  <script src="js/app.js"></script>
+
+</body>
+</html>
