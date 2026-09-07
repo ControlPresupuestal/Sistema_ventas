@@ -897,12 +897,10 @@ const respuesta =
       datos.cotizacion;
 
 
-    alert(
-      `¡Cotización ${cotizacion.numero} guardada!\n\n` +
-      `Cliente: ${cotizacion.cliente}\n` +
-      `Total: S/ ${Number(cotizacion.total).toFixed(2)}`
-    );
+    window.location.href =
+  `vista-cotizacion.html?numero=${encodeURIComponent(cotizacion.numero)}`;
 
+    return;
 
     document
       .querySelector(
