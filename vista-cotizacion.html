@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>ZAREINA | Cotización</title>
+
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+
+<body class="dashboard-page">
+
+  <!-- CABECERA DEL SISTEMA -->
+
+  <header class="topbar">
+
+    <div class="topbar-marca">
+
+      <span class="estrella">✦</span>
+
+      <div>
+        <h1>ZAREINA</h1>
+        <small>Moda que eleva tu esencia</small>
+      </div>
+
+    </div>
+
+
+    <div class="usuario-header">
+
+      <div class="usuario-info">
+        <strong id="nombreUsuario"></strong>
+        <span id="rolUsuario"></span>
+      </div>
+
+      <div
+        id="avatarUsuario"
+        class="avatar">
+      </div>
+
+      <a
+        href="dashboard.html"
+        class="btn-volver">
+        ← Inicio
+      </a>
+
+    </div>
+
+  </header>
+
+
+  <main class="vista-cotizacion-contenedor">
+
+
+    <!-- BOTONES SUPERIORES -->
+
+    <div class="vista-acciones">
+
+      <a
+        href="cotizacion.html"
+        class="btn-cotizacion-secundario">
+        + Nueva cotización
+      </a>
+
+      <button
+        id="btnPDF"
+        class="btn-cotizacion-secundario">
+        PDF
+      </button>
+
+      <button
+        id="btnImagen"
+        class="btn-cotizacion-secundario">
+        Imagen
+      </button>
+
+    </div>
+
+
+
+    <!-- DOCUMENTO -->
+
+    <section
+      id="documentoCotizacion"
+      class="documento-cotizacion">
+
+
+      <!-- ENCABEZADO -->
+
+      <div class="documento-header">
+
+        <div class="documento-marca">
+
+          <div class="documento-logo">
+            ✦
+          </div>
+
+          <div>
+            <h1>ZAREINA</h1>
+            <p>
+              Moda que eleva tu esencia
+            </p>
+          </div>
+
+        </div>
+
+
+        <div class="documento-tipo">
+
+          <span>COTIZACIÓN</span>
+
+          <strong
+            id="numeroCotizacion">
+            ...
+          </strong>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- DATOS -->
+
+      <div class="documento-datos">
+
+        <div>
+
+          <span>CLIENTE</span>
+
+          <strong
+            id="clienteCotizacion">
+            ...
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>FECHA</span>
+
+          <strong
+            id="fechaCotizacion">
+            ...
+          </strong>
+
+        </div>
+
+
+        <div>
+
+          <span>ESTADO</span>
+
+          <strong
+            id="estadoCotizacion"
+            class="estado-cotizacion">
+            ...
+          </strong>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- DETALLE -->
+
+      <div class="documento-tabla">
+
+        <table>
+
+          <thead>
+
+            <tr>
+              <th>Producto</th>
+              <th>Talla</th>
+              <th>Color</th>
+              <th>Cant.</th>
+              <th>Precio</th>
+              <th>Total</th>
+            </tr>
+
+          </thead>
+
+
+          <tbody id="productosCotizacion">
+
+            <tr>
+              <td
+                colspan="6"
+                class="cotizacion-vacia">
+                Cargando cotización...
+              </td>
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+
+
+      <!-- PARTE INFERIOR -->
+
+      <div class="documento-footer">
+
+
+        <div class="mensaje-cotizacion">
+
+          <span>✦</span>
+
+          <h3>
+            Gracias por elegir ZAREINA
+          </h3>
+
+          <p>
+            Esperamos que encuentres
+            algo que eleve tu esencia.
+          </p>
+
+        </div>
+
+
+
+        <div class="documento-totales">
+
+          <div>
+
+            <span>Subtotal</span>
+
+            <strong>
+              S/
+              <span id="subtotalCotizacion">
+                0.00
+              </span>
+            </strong>
+
+          </div>
+
+
+          <div>
+
+            <span>Descuento</span>
+
+            <strong>
+              S/
+              <span id="descuentoCotizacion">
+                0.00
+              </span>
+            </strong>
+
+          </div>
+
+
+          <div class="documento-total-final">
+
+            <span>TOTAL</span>
+
+            <strong>
+              S/
+              <span id="totalCotizacion">
+                0.00
+              </span>
+            </strong>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- PIE -->
+
+      <div class="documento-pie">
+
+        <span>
+          ZAREINA
+        </span>
+
+        <span>
+          Cotización válida según
+          disponibilidad de stock.
+        </span>
+
+      </div>
+
+
+    </section>
+
+
+    <!-- ERROR -->
+
+    <div
+      id="errorCotizacion"
+      class="error-cotizacion"
+      style="display:none;">
+    </div>
+
+
+  </main>
+
+
+  <script src="js/vista-cotizacion.js"></script>
+
+</body>
+
+</html>
