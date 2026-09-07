@@ -842,42 +842,19 @@ async function guardarCotizacion() {
 
   try {
 
-    const respuesta =
-      await fetch(
-        API_URL,
-        {
+    const parametros =
+  new URLSearchParams({
+    accion: "guardarCotizacion",
+    token: usuario.token,
+    cliente: cliente,
+    descuento: descuento.toString(),
+    productos: JSON.stringify(detalle)
+  });
 
-          method:
-            "POST",
-
-          headers: {
-            "Content-Type":
-              "text/plain;charset=utf-8"
-          },
-
-          body:
-            JSON.stringify({
-
-              accion:
-                "guardarCotizacion",
-
-              token:
-                usuario.token,
-
-              cliente:
-                cliente,
-
-              descuento:
-                descuento,
-
-              productos:
-                detalle
-
-            })
-
-        }
-      );
-
+const respuesta =
+  await fetch(
+    `${API_URL}?${parametros.toString()}`
+  );
 
     const datos =
       await respuesta.json();
