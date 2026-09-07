@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZAREINA | Nueva Cotización</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body class="dashboard-page">
+
+  <header class="topbar">
+    <div class="topbar-marca">
+      <span class="estrella">✦</span>
+      <div>
+        <h1>ZAREINA</h1>
+        <small>Moda que eleva tu esencia</small>
+      </div>
+    </div>
+
+    <div class="usuario-header">
+      <div class="usuario-info">
+        <strong id="nombreUsuario"></strong>
+        <span id="rolUsuario"></span>
+      </div>
+
+      <div id="avatarUsuario" class="avatar"></div>
+
+      <a href="dashboard.html" class="btn-volver">
+        ← Inicio
+      </a>
+    </div>
+  </header>
+
+
+  <main class="cotizacion-contenedor">
+
+    <section class="cotizacion-titulo">
+      <div>
+        <span class="etiqueta-zareina">COTIZACIONES</span>
+        <h2>Nueva Cotización</h2>
+        <p>Selecciona los productos que desea el cliente.</p>
+      </div>
+
+      <div class="cotizacion-numero">
+        <span>Cotización</span>
+        <strong>NUEVA</strong>
+      </div>
+    </section>
+
+
+    <!-- CLIENTE -->
+
+    <section class="cotizacion-card">
+
+      <div class="seccion-titulo">
+        <div class="numero-seccion">1</div>
+        <div>
+          <h3>Cliente</h3>
+          <p>¿Para quién estamos preparando esta cotización?</p>
+        </div>
+      </div>
+
+      <div class="campo-cliente">
+        <label for="cliente">Nombre del cliente</label>
+        <input
+          id="cliente"
+          type="text"
+          placeholder="Ej. María González"
+          autocomplete="off"
+        >
+      </div>
+
+    </section>
+
+
+    <!-- PRODUCTO -->
+
+    <section class="cotizacion-card">
+
+      <div class="seccion-titulo">
+        <div class="numero-seccion">2</div>
+        <div>
+          <h3>Agregar productos</h3>
+          <p>Selecciona producto, talla, color y cantidad.</p>
+        </div>
+      </div>
+
+
+      <div class="selector-cotizacion">
+
+        <div class="campo-producto campo-producto-grande">
+          <label for="producto">Producto</label>
+
+          <select id="producto">
+            <option value="">
+              Cargando productos...
+            </option>
+          </select>
+        </div>
+
+
+        <div class="campo-producto">
+          <label for="talla">Talla</label>
+
+          <select id="talla" disabled>
+            <option value="">Seleccionar</option>
+          </select>
+        </div>
+
+
+        <div class="campo-producto">
+          <label for="color">Color</label>
+
+          <select id="color" disabled>
+            <option value="">Seleccionar</option>
+          </select>
+        </div>
+
+
+        <div class="campo-producto">
+          <label for="cantidad">Cantidad</label>
+
+          <input
+            id="cantidad"
+            type="number"
+            min="1"
+            value="1"
+            disabled
+          >
+        </div>
+
+
+        <div class="campo-producto">
+          <label>Precio</label>
+
+          <div class="precio-producto">
+            S/ <span id="precioProducto">0.00</span>
+          </div>
+        </div>
+
+      </div>
+
+
+      <div class="producto-inferior">
+
+        <div id="stockInfo" class="stock-info">
+          Selecciona un producto para consultar disponibilidad.
+        </div>
+
+        <button
+          id="btnAgregarProducto"
+          class="btn-agregar-producto"
+          disabled
+        >
+          + Agregar a cotización
+        </button>
+
+      </div>
+
+    </section>
+
+
+    <!-- DETALLE -->
+
+    <section class="cotizacion-card">
+
+      <div class="seccion-titulo">
+        <div class="numero-seccion">3</div>
+        <div>
+          <h3>Detalle de cotización</h3>
+          <p>Productos seleccionados.</p>
+        </div>
+      </div>
+
+
+      <div class="tabla-responsive">
+
+        <table class="tabla-cotizacion">
+
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Talla</th>
+              <th>Color</th>
+              <th>Cant.</th>
+              <th>P. Unit.</th>
+              <th>Total</th>
+              <th></th>
+            </tr>
+          </thead>
+
+          <tbody id="detalleCotizacion">
+
+            <tr id="filaVacia">
+              <td colspan="7" class="cotizacion-vacia">
+                <div>🛍️</div>
+                <strong>Aún no agregaste productos</strong>
+                <span>Selecciona un producto arriba para comenzar.</span>
+              </td>
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </section>
+
+
+    <!-- TOTAL -->
+
+    <section class="resumen-cotizacion">
+
+      <div class="resumen-frase">
+        <span>✦</span>
+        <p>Moda que eleva tu esencia</p>
+      </div>
+
+
+      <div class="resumen-box">
+
+        <div class="resumen-linea">
+          <span>Subtotal</span>
+          <strong>
+            S/ <span id="subtotal">0.00</span>
+          </strong>
+        </div>
+
+
+        <div class="resumen-linea">
+          <label for="descuento">
+            Descuento
+          </label>
+
+          <div class="input-descuento">
+            <span>S/</span>
+            <input
+              id="descuento"
+              type="number"
+              min="0"
+              step="0.10"
+              value="0"
+            >
+          </div>
+        </div>
+
+
+        <div class="resumen-linea total-cotizacion">
+          <span>Total</span>
+
+          <strong>
+            S/ <span id="totalGeneral">0.00</span>
+          </strong>
+        </div>
+
+
+        <div class="acciones-cotizacion">
+
+          <button
+            id="btnLimpiar"
+            class="btn-cotizacion-secundario"
+          >
+            Limpiar
+          </button>
+
+          <button
+            id="btnGuardarCotizacion"
+            class="btn-cotizacion-principal"
+          >
+            Guardar Cotización
+          </button>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="js/cotizacion.js"></script>
+
+</body>
+</html>
