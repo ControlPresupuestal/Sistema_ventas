@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZAREINA | Cotizaciones</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/historial.css">
+</head>
+
+<body class="dashboard-page">
+
+  <header class="topbar">
+    <div class="topbar-marca">
+      <span class="estrella">✦</span>
+      <div>
+        <h1>ZAREINA</h1>
+        <small>Moda que eleva tu esencia</small>
+      </div>
+    </div>
+
+    <div class="usuario-header">
+      <div class="usuario-info">
+        <strong id="nombreUsuario"></strong>
+        <span id="rolUsuario"></span>
+      </div>
+
+      <div id="avatarUsuario" class="avatar"></div>
+
+      <a href="dashboard.html" class="btn-volver">
+        ← Inicio
+      </a>
+    </div>
+  </header>
+
+
+  <main class="cotizacion-contenedor">
+
+    <section class="cotizacion-titulo">
+      <div>
+        <span class="etiqueta-zareina">COTIZACIONES</span>
+        <h2>Historial</h2>
+        <p>Busca y abre las cotizaciones registradas.</p>
+      </div>
+
+      <a href="cotizacion.html" class="btn-cotizacion-principal historial-nueva">
+        + Nueva cotización
+      </a>
+    </section>
+
+
+    <!-- FILTROS -->
+
+    <section class="cotizacion-card historial-filtros">
+
+      <div class="campo-producto historial-buscar">
+        <label for="buscar">Buscar</label>
+        <input
+          id="buscar"
+          type="search"
+          placeholder="Cliente o número (ej. María, COT-000012)"
+          autocomplete="off"
+        >
+      </div>
+
+      <div class="campo-producto">
+        <label for="desde">Desde</label>
+        <input id="desde" type="date">
+      </div>
+
+      <div class="campo-producto">
+        <label for="hasta">Hasta</label>
+        <input id="hasta" type="date">
+      </div>
+
+      <div class="campo-producto">
+        <label for="estado">Estado</label>
+        <select id="estado">
+          <option value="">Todos</option>
+        </select>
+      </div>
+
+      <button id="btnLimpiarFiltros" class="btn-cotizacion-secundario historial-limpiar">
+        Limpiar
+      </button>
+
+    </section>
+
+
+    <!-- RESUMEN -->
+
+    <section class="historial-resumen">
+      <div>
+        <span>Cotizaciones</span>
+        <strong id="resumenCantidad">0</strong>
+      </div>
+      <div>
+        <span>Monto total</span>
+        <strong>S/ <span id="resumenMonto">0.00</span></strong>
+      </div>
+    </section>
+
+
+    <!-- LISTA -->
+
+    <section class="cotizacion-card">
+
+      <div class="tabla-responsive">
+        <table class="tabla-cotizacion historial-tabla">
+
+          <thead>
+            <tr>
+              <th>Número</th>
+              <th>Fecha</th>
+              <th>Cliente</th>
+              <th>Vendedora</th>
+              <th>Estado</th>
+              <th class="historial-derecha">Total</th>
+              <th></th>
+            </tr>
+          </thead>
+
+          <tbody id="listaCotizaciones">
+            <tr>
+              <td colspan="7" class="cotizacion-vacia">
+                Cargando cotizaciones...
+              </td>
+            </tr>
+          </tbody>
+
+        </table>
+      </div>
+
+      <div class="historial-paginacion">
+        <button id="btnVerMas" class="btn-cotizacion-secundario" style="display:none;">
+          Ver más
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="js/cotizaciones.js"></script>
+
+</body>
+</html>
