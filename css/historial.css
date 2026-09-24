@@ -97,6 +97,11 @@
   color: #a64d43;
 }
 
+.estado-separado {
+  background: #fbeee2;
+  color: #a4602a;
+}
+
 .historial-paginacion {
   display: flex;
   justify-content: center;
