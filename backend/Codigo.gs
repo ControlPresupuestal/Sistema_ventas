@@ -7,6 +7,9 @@ const NOMBRE_HOJA_ANULACIONES = 'ANULACIONES';
 const NOMBRE_HOJA_CLIENTES = 'CLIENTES';
 const NOMBRE_HOJA_CONFIGURACION = 'CONFIGURACION';
 
+// Nombre que se usa en la venta rápida cuando no se escribe cliente
+const CLIENTE_MOSTRADOR = 'Cliente de mostrador';
+
 const METODOS_PAGO = ['EFECTIVO', 'YAPE', 'PLIN', 'TRANSFERENCIA', 'TARJETA'];
 
 const DURACION_SESION = 21600;      // 6 horas
@@ -62,6 +65,10 @@ function doGet(e) {
     return verConfiguracion(p);
   }
 
+  if (accion === 'resumendia') {
+    return resumenDelDia(p);
+  }
+
   if (accion === 'login' || accion === 'guardarcotizacion') {
     return responderJSON({
       ok: false,
@@ -102,6 +109,10 @@ function doPost(e) {
 
     if (accion === 'registrarventa') {
       return registrarVenta(datos);
+    }
+
+    if (accion === 'ventadirecta') {
+      return ventaDirecta(datos);
     }
 
     if (accion === 'anularcotizacion') {
@@ -524,7 +535,9 @@ function guardarCotizacion(datos) {
       .getRange(hojaDetalle.getLastRow() + 1, 1, filasDetalle.length, 8)
       .setValues(filasDetalle);
 
-    registrarClienteSiNoExiste(ss, cliente);
+    if (normalizarTexto(cliente) !== normalizarTexto(CLIENTE_MOSTRADOR)) {
+      registrarClienteSiNoExiste(ss, cliente);
+    }
 
     return responderJSON({
       ok: true,
@@ -674,6 +687,7 @@ function obtenerCotizacion(p) {
       usuario: String(cabecera[7] || ''),
       productos: productos
     },
+    clienteTelefono: telefonoDeCliente(ss, cabecera[2]),
     configuracion: leerConfiguracion()
   });
 }
@@ -2142,6 +2156,156 @@ function guardarConfiguracion(datos) {
 
     lock.releaseLock();
   }
+}
+
+
+// ======================================================
+// VENTA RÁPIDA (cotización + venta en un solo paso)
+// ======================================================
+
+function leerRespuesta(salida) {
+  return typeof salida.getContent === 'function' ? JSON.parse(salida.getContent()) : salida;
+}
+
+
+function ventaDirecta(datos) {
+
+  if (!validarSesion(datos.token)) {
+    return respuestaSesionVencida();
+  }
+
+  const metodoPago = String(datos.metodoPago || '').trim().toUpperCase();
+
+  // Se valida antes de guardar nada
+  if (METODOS_PAGO.indexOf(metodoPago) === -1 || leerConfiguracion().metodosActivos.indexOf(metodoPago) === -1) {
+    return responderJSON({ ok: false, mensaje: 'Selecciona un método de pago activo.' });
+  }
+
+  const cotizacion = leerRespuesta(guardarCotizacion(Object.assign({}, datos, {
+    cliente: String(datos.cliente || '').trim() || CLIENTE_MOSTRADOR
+  })));
+
+  if (!cotizacion.ok) {
+    return responderJSON(cotizacion);
+  }
+
+  const numero = cotizacion.cotizacion.numero;
+
+  const venta = leerRespuesta(registrarVenta({
+    token: datos.token,
+    numero: numero,
+    metodoPago: metodoPago
+  }));
+
+  if (!venta.ok) {
+    return responderJSON({
+      ok: false,
+      cotizacionGuardada: numero,
+      mensaje: 'Se guardó la cotización ' + numero + ', pero no se pudo registrar la venta: ' + venta.mensaje
+    });
+  }
+
+  return responderJSON({ ok: true, cotizacion: cotizacion.cotizacion, venta: venta.venta });
+}
+
+
+// Teléfono del cliente guardado en CLIENTES (para WhatsApp)
+function telefonoDeCliente(ss, nombre) {
+
+  try {
+    const clave = normalizarTexto(nombre);
+    const fila = leerHoja(ss, NOMBRE_HOJA_CLIENTES, 3).find(f => normalizarTexto(f[1]) === clave);
+    return fila ? String(fila[2]).trim() : '';
+  } catch (error) {
+    return '';
+  }
+}
+
+
+// ======================================================
+// RESUMEN DEL DÍA (pantalla de inicio)
+// ======================================================
+
+function resumenDelDia(p) {
+
+  const sesion = validarSesion(p.token);
+
+  if (!sesion) {
+    return respuestaSesionVencida();
+  }
+
+  const admin = esAdministradora(sesion);
+  const yo = normalizarTexto(sesion.nombre);
+  const hoy = fechaISO(new Date());
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // La vendedora solo ve lo suyo; la administradora, toda la tienda
+  const esMio = nombre => admin || normalizarTexto(nombre) === yo;
+
+  let total = 0;
+  let ventas = 0;
+  const porMetodo = {};
+  const porVendedora = {};
+
+  leerHoja(ss, NOMBRE_HOJA_VENTAS, 8).forEach(fila => {
+    if (!String(fila[0]).trim()) return;
+    if (fechaISO(fila[1]) !== hoy) return;
+    if (String(fila[7] || '').trim().toUpperCase() === 'ANULADA') return;
+    if (!esMio(fila[6])) return;
+
+    const monto = Number(fila[4]) || 0;
+    const metodo = String(fila[5] || '').trim() || 'SIN DATO';
+    const vendedora = String(fila[6] || '').trim() || 'Sin registrar';
+
+    total += monto;
+    ventas += 1;
+    porMetodo[metodo] = (porMetodo[metodo] || 0) + monto;
+    porVendedora[vendedora] = (porVendedora[vendedora] || 0) + monto;
+  });
+
+  let pendientes = 0;
+
+  leerHoja(ss, NOMBRE_HOJA_COTIZACIONES, 8).forEach(fila => {
+    if (!String(fila[0]).trim()) return;
+    if (String(fila[6] || '').trim().toUpperCase() !== 'COTIZADO') return;
+    if (fechaISO(fila[1]) !== hoy) return;
+    if (!esMio(fila[7])) return;
+    pendientes += 1;
+  });
+
+  const umbral = leerConfiguracion().stockBajo;
+
+  const bajos = leerHoja(ss, NOMBRE_HOJA_PRODUCTOS, 7)
+    .filter(fila => String(fila[0]).trim() && String(fila[6]).trim().toUpperCase() !== 'INACTIVO')
+    .map(fila => ({
+      producto: String(fila[1]).trim(),
+      color: String(fila[2]).trim(),
+      talla: String(fila[3]).trim(),
+      stock: Number(fila[5]) || 0
+    }))
+    .filter(x => x.stock <= umbral)
+    .sort((a, b) => a.stock - b.stock || a.producto.localeCompare(b.producto));
+
+  const lista = obj => Object.keys(obj)
+    .map(k => ({ nombre: k, total: Math.round(obj[k] * 100) / 100 }))
+    .sort((a, b) => b.total - a.total);
+
+  return responderJSON({
+    ok: true,
+    resumen: {
+      fecha: hoy,
+      alcance: admin ? 'TIENDA' : 'PROPIO',
+      total: Math.round(total * 100) / 100,
+      ventas: ventas,
+      pendientes: pendientes,
+      porMetodo: lista(porMetodo),
+      porVendedora: admin ? lista(porVendedora) : [],
+      stockBajo: umbral,
+      agotados: bajos.filter(x => x.stock <= 0).length,
+      bajos: bajos.length,
+      productosBajos: bajos.slice(0, 6)
+    }
+  });
 }
 
 
