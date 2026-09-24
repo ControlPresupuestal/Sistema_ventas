@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZAREINA | Productos</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/historial.css">
+  <link rel="stylesheet" href="css/ventas.css">
+  <link rel="stylesheet" href="css/productos.css">
+</head>
+
+<body class="dashboard-page">
+
+  <header class="topbar">
+    <div class="topbar-marca">
+      <span class="estrella">✦</span>
+      <div>
+        <h1>ZAREINA</h1>
+        <small>Moda que eleva tu esencia</small>
+      </div>
+    </div>
+
+    <div class="usuario-header">
+      <div class="usuario-info">
+        <strong id="nombreUsuario"></strong>
+        <span id="rolUsuario"></span>
+      </div>
+
+      <div id="avatarUsuario" class="avatar"></div>
+
+      <a href="dashboard.html" class="btn-volver">
+        ← Inicio
+      </a>
+    </div>
+  </header>
+
+
+  <main class="cotizacion-contenedor">
+
+    <section class="cotizacion-titulo">
+      <div>
+        <span class="etiqueta-zareina">INVENTARIO</span>
+        <h2>Productos</h2>
+        <p>Tallas, colores, precios y stock disponible.</p>
+      </div>
+
+      <button id="btnNuevoProducto" class="btn-cotizacion-principal historial-nueva" style="display:none;">
+        + Nuevo producto
+      </button>
+    </section>
+
+
+    <!-- FILTROS -->
+
+    <section class="cotizacion-card historial-filtros productos-filtros">
+
+      <div class="campo-producto historial-buscar">
+        <label for="buscar">Buscar</label>
+        <input
+          id="buscar"
+          type="search"
+          placeholder="Producto, color, talla o código"
+          autocomplete="off"
+        >
+      </div>
+
+      <div class="campo-producto">
+        <label for="filtroStock">Stock</label>
+        <select id="filtroStock">
+          <option value="">Todos</option>
+          <option value="con">Con stock</option>
+          <option value="bajo">Stock bajo (2 o menos)</option>
+          <option value="agotado">Agotados</option>
+        </select>
+      </div>
+
+      <div class="campo-producto">
+        <label for="filtroEstado">Estado</label>
+        <select id="filtroEstado">
+          <option value="">Todos</option>
+          <option value="ACTIVO">Activos</option>
+          <option value="INACTIVO">Inactivos</option>
+        </select>
+      </div>
+
+      <button id="btnLimpiarFiltros" class="btn-cotizacion-secundario historial-limpiar">
+        Limpiar
+      </button>
+
+    </section>
+
+
+    <!-- RESUMEN -->
+
+    <section class="historial-resumen productos-resumen">
+      <div>
+        <span>Productos</span>
+        <strong id="resumenProductos">0</strong>
+      </div>
+      <div>
+        <span>Variantes</span>
+        <strong id="resumenVariantes">0</strong>
+      </div>
+      <div>
+        <span>Unidades</span>
+        <strong id="resumenUnidades">0</strong>
+      </div>
+      <div class="resumen-alerta">
+        <span>Stock bajo / agotado</span>
+        <strong id="resumenAlertas">0</strong>
+      </div>
+    </section>
+
+
+    <!-- LISTA -->
+
+    <section class="cotizacion-card">
+
+      <div class="tabla-responsive">
+        <table class="tabla-cotizacion historial-tabla productos-tabla">
+
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Talla</th>
+              <th>Color</th>
+              <th class="historial-derecha">Precio</th>
+              <th class="historial-derecha">Stock</th>
+              <th>Estado</th>
+              <th class="solo-admin-col"></th>
+            </tr>
+          </thead>
+
+          <tbody id="listaProductos">
+            <tr>
+              <td colspan="7" class="cotizacion-vacia">
+                Cargando productos...
+              </td>
+            </tr>
+          </tbody>
+
+        </table>
+      </div>
+
+    </section>
+
+
+    <!-- VENTANA: EDITAR / NUEVO -->
+
+    <div id="modalProducto" class="modal-fondo" style="display:none;">
+
+      <div class="modal-caja" role="dialog" aria-modal="true" aria-labelledby="tituloModalProducto">
+
+        <h3 id="tituloModalProducto">Nuevo producto</h3>
+
+        <p id="codigoProducto" class="modal-texto"></p>
+
+        <div class="producto-form">
+
+          <div class="campo-producto producto-form-ancho">
+            <label for="fProducto">Producto</label>
+            <input id="fProducto" type="text" maxlength="80" list="listaNombres" autocomplete="off">
+            <datalist id="listaNombres"></datalist>
+          </div>
+
+          <div class="campo-producto">
+            <label for="fTalla">Talla</label>
+            <input id="fTalla" type="text" maxlength="20" autocomplete="off">
+          </div>
+
+          <div class="campo-producto">
+            <label for="fColor">Color</label>
+            <input id="fColor" type="text" maxlength="40" autocomplete="off">
+          </div>
+
+          <div class="campo-producto">
+            <label for="fPrecio">Precio (S/)</label>
+            <input id="fPrecio" type="number" min="0" step="0.10" inputmode="decimal">
+          </div>
+
+          <div class="campo-producto">
+            <label for="fStock">Stock</label>
+            <input id="fStock" type="number" min="0" step="1" inputmode="numeric">
+          </div>
+
+          <div class="campo-producto producto-form-ancho">
+            <label for="fEstado">Estado</label>
+            <select id="fEstado">
+              <option value="ACTIVO">Activo (se puede cotizar)</option>
+              <option value="INACTIVO">Inactivo (oculto al cotizar)</option>
+            </select>
+          </div>
+
+        </div>
+
+        <div id="modalProductoError" class="modal-error"></div>
+
+        <div class="acciones-cotizacion">
+          <button id="btnCancelarProducto" class="btn-cotizacion-secundario">
+            Cancelar
+          </button>
+
+          <button id="btnGuardarProducto" class="btn-cotizacion-principal">
+            Guardar
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <script src="js/productos.js"></script>
+
+</body>
+</html>
