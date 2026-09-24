@@ -40,6 +40,10 @@ function doGet(e) {
     return listarVentas(p);
   }
 
+  if (accion === 'inventario') {
+    return listarInventario(p);
+  }
+
   if (accion === 'login' || accion === 'guardarcotizacion') {
     return responderJSON({
       ok: false,
@@ -84,6 +88,10 @@ function doPost(e) {
 
     if (accion === 'anularcotizacion') {
       return anularCotizacion(datos);
+    }
+
+    if (accion === 'guardarproducto') {
+      return guardarProducto(datos);
     }
 
     if (accion === 'logout') {
@@ -1133,6 +1141,213 @@ function obtenerHojaAnulaciones(ss) {
   }
 
   return hoja;
+}
+
+
+// ======================================================
+// INVENTARIO DE PRODUCTOS
+// ======================================================
+
+function listarInventario(p) {
+
+  if (!validarSesion(p.token)) {
+    return respuestaSesionVencida();
+  }
+
+  const hoja = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName(NOMBRE_HOJA_PRODUCTOS);
+
+  if (!hoja) {
+    return responderJSON({ ok: false, mensaje: 'No existe la hoja PRODUCTOS.' });
+  }
+
+  if (hoja.getLastRow() < 2) {
+    return responderJSON({ ok: true, productos: [] });
+  }
+
+  const productos = hoja
+    .getRange(2, 1, hoja.getLastRow() - 1, 7)
+    .getValues()
+    .filter(fila => String(fila[0]).trim())
+    .map(fila => ({
+      id: String(fila[0]).trim(),
+      producto: String(fila[1]).trim(),
+      color: String(fila[2]).trim(),
+      talla: String(fila[3]).trim(),
+      precio: Number(fila[4]) || 0,
+      stock: Number(fila[5]) || 0,
+      estado: String(fila[6]).trim().toUpperCase() === 'INACTIVO' ? 'INACTIVO' : 'ACTIVO'
+    }));
+
+  return responderJSON({ ok: true, productos: productos });
+}
+
+
+// Crea o actualiza una variante de producto (solo administradora).
+
+function guardarProducto(datos) {
+
+  const sesion = validarSesion(datos.token);
+
+  if (!sesion) {
+    return respuestaSesionVencida();
+  }
+
+  if (String(sesion.rol || '').trim().toUpperCase() !== 'ADMINISTRADOR') {
+    return responderJSON({ ok: false, mensaje: 'Solo la administradora puede modificar productos.' });
+  }
+
+  const id = String(datos.id || '').trim();
+  const producto = String(datos.producto || '').trim();
+  const color = String(datos.color || '').trim();
+  const talla = String(datos.talla || '').trim();
+  const precio = Number(datos.precio);
+  const stock = Number(datos.stock);
+  const estado = String(datos.estado || 'ACTIVO').trim().toUpperCase();
+
+  if (!producto || !color || !talla) {
+    return responderJSON({ ok: false, mensaje: 'Completa producto, color y talla.' });
+  }
+
+  if (!isFinite(precio) || precio < 0) {
+    return responderJSON({ ok: false, mensaje: 'El precio no es válido.' });
+  }
+
+  if (!Number.isInteger(stock) || stock < 0) {
+    return responderJSON({ ok: false, mensaje: 'El stock debe ser un número entero de 0 o más.' });
+  }
+
+  if (estado !== 'ACTIVO' && estado !== 'INACTIVO') {
+    return responderJSON({ ok: false, mensaje: 'Estado no válido.' });
+  }
+
+  const lock = LockService.getScriptLock();
+
+  try {
+
+    lock.waitLock(15000);
+
+    const hoja = SpreadsheetApp
+      .getActiveSpreadsheet()
+      .getSheetByName(NOMBRE_HOJA_PRODUCTOS);
+
+    if (!hoja) {
+      throw new Error('No existe la hoja PRODUCTOS.');
+    }
+
+    const filas = hoja.getLastRow() < 2 ? [] : hoja
+      .getRange(2, 1, hoja.getLastRow() - 1, 7)
+      .getValues();
+
+    const clave = (p, c, t) =>
+      [p, c, t].map(x => String(x).trim().toLowerCase()).join('|');
+
+    const claveNueva = clave(producto, color, talla);
+
+    const duplicado = filas.findIndex(fila =>
+      String(fila[0]).trim() !== id &&
+      clave(fila[1], fila[2], fila[3]) === claveNueva
+    );
+
+    if (duplicado !== -1) {
+      throw new Error(
+        'Ya existe "' + producto + '" en talla ' + talla + ' y color ' + color +
+        ' (código ' + String(filas[duplicado][0]).trim() + ').'
+      );
+    }
+
+    const valores = [
+      textoSeguro(producto),
+      textoSeguro(color),
+      textoSeguro(talla),
+      precio,
+      stock,
+      estado
+    ];
+
+    let idFinal = id;
+
+    if (id) {
+
+      const indice = filas.findIndex(fila => String(fila[0]).trim() === id);
+
+      if (indice === -1) {
+        throw new Error('No se encontró el producto con código ' + id);
+      }
+
+      hoja.getRange(indice + 2, 2, 1, 6).setValues([valores]);
+
+    } else {
+
+      idFinal = generarIdProducto(filas.map(fila => String(fila[0]).trim()));
+      hoja.appendRow([idFinal].concat(valores));
+    }
+
+    SpreadsheetApp.flush();
+
+    return responderJSON({
+      ok: true,
+      producto: {
+        id: idFinal,
+        producto: producto,
+        color: color,
+        talla: talla,
+        precio: precio,
+        stock: stock,
+        estado: estado
+      },
+      nuevo: !id
+    });
+
+  } catch (error) {
+
+    return responderJSON({ ok: false, mensaje: error.message });
+
+  } finally {
+
+    lock.releaseLock();
+  }
+}
+
+
+// Sigue el formato de los códigos existentes (ej. P0012 -> P0013).
+
+function generarIdProducto(ids) {
+
+  const conteo = {};
+  let mayor = 0;
+  let ancho = 0;
+
+  ids.forEach(id => {
+    const m = id.match(/^(.*?)(\d+)$/);
+    if (m) {
+      conteo[m[1]] = (conteo[m[1]] || 0) + 1;
+    }
+  });
+
+  const prefijo = Object.keys(conteo).sort((a, b) => conteo[b] - conteo[a])[0];
+
+  if (prefijo === undefined) {
+    return 'PROD-' + String(ids.length + 1).padStart(4, '0');
+  }
+
+  ids.forEach(id => {
+    const m = id.match(/^(.*?)(\d+)$/);
+    if (m && m[1] === prefijo) {
+      mayor = Math.max(mayor, Number(m[2]));
+      ancho = Math.max(ancho, m[2].length);
+    }
+  });
+
+  let nuevo;
+
+  do {
+    mayor += 1;
+    nuevo = prefijo + String(mayor).padStart(ancho, '0');
+  } while (ids.indexOf(nuevo) !== -1);
+
+  return nuevo;
 }
 
 
