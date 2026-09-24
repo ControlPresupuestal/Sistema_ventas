@@ -1,0 +1,179 @@
+/* ==================================
+   CONFIGURACIÓN
+================================== */
+
+.config-contenedor {
+  max-width: 900px;
+}
+
+.config-estado {
+  text-align: center;
+  color: #8e8178;
+  padding: 40px 0;
+}
+
+.config-titulo {
+  margin-bottom: 18px;
+}
+
+.config-titulo h3 {
+  margin: 0 0 4px;
+  font-family: Georgia, serif;
+  font-size: 19px;
+  color: #4c2d20;
+}
+
+.config-titulo p {
+  margin: 0;
+  color: #9a897e;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.config-opcional {
+  font-weight: normal;
+  color: #aa9a90;
+}
+
+.config-ayuda {
+  display: block;
+  margin-top: 6px;
+  color: #9a897e;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Métodos de pago */
+
+.config-metodos {
+  display: grid;
+  gap: 10px;
+}
+
+.config-metodo {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid #eadfd4;
+  border-radius: 12px;
+  background: #fffdfb;
+}
+
+.config-metodo.apagado {
+  background: #faf7f4;
+}
+
+.config-metodo.apagado .config-switch span {
+  color: #aa9a90;
+}
+
+.config-metodo > input {
+  width: 100%;
+  height: 42px;
+  border: 1px solid #d9d0c8;
+  border-radius: 9px;
+  padding: 0 12px;
+  background: #ffffff;
+  color: #4c2d20;
+}
+
+.config-metodo > input:disabled {
+  background: #f4efea;
+  color: #aa9a90;
+}
+
+.config-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  cursor: pointer;
+  font-size: 15px;
+  color: #4c2d20;
+}
+
+.config-switch input {
+  width: 20px;
+  height: 20px;
+  accent-color: #6f442f;
+  cursor: pointer;
+}
+
+/* Barra de guardar */
+
+.config-barra {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin: 0 -8px;
+  padding: 14px 8px;
+  background: rgba(250, 246, 241, .96);
+  border-top: 1px solid #eadfd4;
+}
+
+.config-barra .btn-cotizacion-principal,
+.config-barra .btn-cotizacion-secundario {
+  flex: initial;
+  height: 45px;
+  padding: 0 22px;
+  border-radius: 9px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.config-barra button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.config-mensaje {
+  flex: 1;
+  font-size: 14px;
+  color: #8e8178;
+}
+
+.config-mensaje.ok {
+  color: #3d6b43;
+}
+
+.config-mensaje.error {
+  color: #a63d3d;
+}
+
+.campo-producto input.invalido,
+.campo-producto textarea.invalido {
+  border-color: #c9675c;
+}
+
+
+@media (max-width: 650px) {
+
+  .config-contenedor .producto-form {
+    grid-template-columns: 1fr;
+  }
+
+  .config-metodo {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .config-barra {
+    flex-wrap: wrap;
+  }
+
+  .config-mensaje {
+    flex-basis: 100%;
+  }
+
+  .config-barra .btn-cotizacion-principal,
+  .config-barra .btn-cotizacion-secundario {
+    flex: 1;
+    padding: 0 10px;
+  }
+}
