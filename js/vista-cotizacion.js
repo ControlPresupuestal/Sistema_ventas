@@ -12,16 +12,18 @@ const sesion =
   );
 
 
-if (!sesion) {
-
-  window.location.href =
-    "index.html";
-
-}
-
-
 const usuario =
-  JSON.parse(sesion);
+  sesion ? JSON.parse(sesion) : null;
+
+
+if (!usuario || !usuario.token) {
+
+  sessionStorage.removeItem("zareinaUsuario");
+
+  window.location.replace("index.html");
+
+  throw new Error("Sin sesión");
+}
 
 
 document
@@ -92,7 +94,8 @@ async function cargarCotizacion(numero) {
     const parametros =
       new URLSearchParams({
         accion: "vercotizacion",
-        numero: numero
+        numero: numero,
+        token: usuario.token
       });
 
 
@@ -107,6 +110,17 @@ async function cargarCotizacion(numero) {
 
 
     if (!datos.ok) {
+
+      if (datos.sesionExpirada) {
+
+        sessionStorage.removeItem("zareinaUsuario");
+
+        alert(datos.mensaje);
+
+        window.location.replace("index.html");
+
+        return;
+      }
 
       throw new Error(
         datos.mensaje
