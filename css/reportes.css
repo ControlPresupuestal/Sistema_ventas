@@ -98,6 +98,13 @@
   color: #ead9b5;
 }
 
+.kpi-principal .kpi-ganancia {
+  display: block;
+  margin-top: 4px;
+  color: #ffffff;
+  font-weight: bold;
+}
+
 .kpi-principal strong {
   color: #ffffff;
   font-size: 32px;
