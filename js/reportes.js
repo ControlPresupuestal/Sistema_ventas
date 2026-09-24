@@ -177,6 +177,15 @@ function render() {
   document.getElementById("kPeriodo").textContent =
     r.desde === r.hasta ? fechaCorta(r.desde) : `${fechaCorta(r.desde)} – ${fechaCorta(r.hasta)}`;
 
+  // Ganancia: solo se puede calcular en ventas cuyos productos tienen costo (Mercadería)
+  const ganancia = document.getElementById("kGanancia");
+
+  if (ganancia) {
+    ganancia.textContent = r.ventasConCosto
+      ? `Ganancia estimada ${soles(r.ganancia)}` + (r.ventasConCosto < r.ventas ? ` (en ${r.ventasConCosto} de ${r.ventas} ventas con costo)` : "")
+      : "Registra costos en Mercadería para ver la ganancia";
+  }
+
   document.getElementById("kVentas").textContent = r.ventas;
   document.getElementById("kAnuladas").textContent = r.anuladas ? `${r.anuladas} anulada(s), no suman` : "sin anulaciones";
 
@@ -189,7 +198,9 @@ function render() {
 
   dibujarColumnas(agruparSerie(r.porDia));
 
-  barras("barrasMetodo", r.porMetodo, x => soles(x.total), x => `${x.ventas} venta(s)`, "total");
+  const metodos = (r.porMetodo || []).map(x => x.nombre === "SEPARADO" ? Object.assign({}, x, { nombre: "Separados (pagados en partes)" }) : x);
+
+  barras("barrasMetodo", metodos, x => soles(x.total), x => `${x.ventas} venta(s)`, "total");
   barras("barrasVendedora", r.porVendedora, x => soles(x.total), x => `${x.ventas} venta(s)`, "total");
   barras("barrasProductos", r.productos, x => `${x.unidades} und.`, x => soles(x.total), "unidades");
 }
