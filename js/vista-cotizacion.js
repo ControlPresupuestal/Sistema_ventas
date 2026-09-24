@@ -139,6 +139,8 @@ async function cargarCotizacion(numero) {
 
     prepararVenta(datos.cotizacion);
 
+    prepararAnulacion(datos.cotizacion);
+
     btnPDF.disabled = false;
     btnImagen.disabled = false;
 
@@ -734,6 +736,8 @@ btnConfirmarVenta.addEventListener("click", async () => {
     document.getElementById("estadoCotizacion").textContent = "VENDIDO";
     btnVender.style.display = "none";
 
+    prepararAnulacion({ numero: numeroCargado, estado: "VENDIDO" });
+
     const aviso = document.getElementById("avisoVenta");
 
     aviso.innerHTML = `
@@ -760,6 +764,166 @@ btnConfirmarVenta.addEventListener("click", async () => {
   } finally {
 
     enviandoVenta = false;
+  }
+});
+
+
+
+// ======================================================
+// ANULAR
+// ======================================================
+
+const btnAnular = document.getElementById("btnAnular");
+const modalAnular = document.getElementById("modalAnular");
+const motivoInput = document.getElementById("motivoAnulacion");
+const btnConfirmarAnular = document.getElementById("btnConfirmarAnular");
+const modalAnularError = document.getElementById("modalAnularError");
+
+const esAdministradora =
+  String(usuario.rol || "").trim().toUpperCase() === "ADMINISTRADOR";
+
+let estadoCargado = "";
+let enviandoAnulacion = false;
+
+
+function prepararAnulacion(cotizacion) {
+
+  estadoCargado = String(cotizacion.estado || "").trim().toUpperCase();
+
+  const puede =
+    estadoCargado !== "ANULADO" &&
+    (estadoCargado !== "VENDIDO" || esAdministradora);
+
+  btnAnular.style.display = puede ? "inline-flex" : "none";
+}
+
+
+function abrirModalAnular() {
+
+  const vendida = estadoCargado === "VENDIDO";
+
+  document.getElementById("tituloModalAnular").textContent =
+    vendida ? "Anular venta" : "Anular cotización";
+
+  document.getElementById("textoAnular").innerHTML = vendida
+    ? `La cotización <strong>${escaparHTML(numeroCargado)}</strong> ya fue vendida.
+       Al anularla se <strong>devolverá el stock</strong> de sus productos y la venta
+       quedará como <strong>ANULADA</strong>. Esta acción no se puede deshacer.`
+    : `La cotización <strong>${escaparHTML(numeroCargado)}</strong> quedará como
+       <strong>ANULADO</strong> y ya no se podrá vender. Esta acción no se puede deshacer.`;
+
+  motivoInput.value = "";
+  modalAnularError.textContent = "";
+  btnConfirmarAnular.disabled = true;
+  btnConfirmarAnular.textContent = vendida ? "Anular venta" : "Anular";
+
+  modalAnular.style.display = "flex";
+  motivoInput.focus();
+}
+
+
+function cerrarModalAnular() {
+
+  if (enviandoAnulacion) return;
+
+  modalAnular.style.display = "none";
+}
+
+
+btnAnular.addEventListener("click", abrirModalAnular);
+
+document.getElementById("btnCancelarAnular").addEventListener("click", cerrarModalAnular);
+
+modalAnular.addEventListener("click", (event) => {
+  if (event.target === modalAnular) cerrarModalAnular();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && modalAnular.style.display !== "none") cerrarModalAnular();
+});
+
+motivoInput.addEventListener("input", () => {
+  btnConfirmarAnular.disabled = motivoInput.value.trim().length < 3;
+});
+
+
+btnConfirmarAnular.addEventListener("click", async () => {
+
+  const motivo = motivoInput.value.trim();
+
+  if (motivo.length < 3 || enviandoAnulacion) return;
+
+  enviandoAnulacion = true;
+  btnConfirmarAnular.disabled = true;
+  btnConfirmarAnular.textContent = "Anulando...";
+  modalAnularError.textContent = "";
+
+  try {
+
+    const respuesta = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        accion: "anularCotizacion",
+        token: usuario.token,
+        numero: numeroCargado,
+        motivo: motivo
+      })
+    });
+
+    const datos = await respuesta.json();
+
+    if (!datos.ok) {
+
+      if (datos.sesionExpirada) {
+        sessionStorage.removeItem("zareinaUsuario");
+        alert(datos.mensaje);
+        window.location.replace("index.html");
+        return;
+      }
+
+      throw new Error(datos.mensaje);
+    }
+
+    const anulacion = datos.anulacion;
+
+    enviandoAnulacion = false;
+    cerrarModalAnular();
+
+    document.getElementById("estadoCotizacion").textContent = "ANULADO";
+    btnVender.style.display = "none";
+    btnAnular.style.display = "none";
+    estadoCargado = "ANULADO";
+
+    const devuelto = (anulacion.stockDevuelto || [])
+      .map(d => `${d.cantidad} × ${escaparHTML(d.producto)}`)
+      .join(", ");
+
+    const aviso = document.getElementById("avisoVenta");
+
+    aviso.className = "aviso-venta aviso-anulado";
+
+    aviso.innerHTML = anulacion.venta
+      ? `<strong>Venta ${escaparHTML(anulacion.venta)} anulada</strong>
+         <span>Stock devuelto: ${devuelto || "—"}.</span>`
+      : `<strong>Cotización ${escaparHTML(anulacion.cotizacion)} anulada</strong>
+         <span>Motivo: ${escaparHTML(motivo)}</span>`;
+
+    aviso.style.display = "flex";
+
+    aviso.scrollIntoView({ behavior: "smooth", block: "center" });
+
+  } catch (error) {
+
+    console.error(error);
+
+    modalAnularError.textContent = error.message || "No se pudo anular.";
+    btnConfirmarAnular.disabled = false;
+    btnConfirmarAnular.textContent =
+      estadoCargado === "VENDIDO" ? "Anular venta" : "Anular";
+
+  } finally {
+
+    enviandoAnulacion = false;
   }
 });
 
