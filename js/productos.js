@@ -1,7 +1,8 @@
 const API_URL =
   "https://script.google.com/macros/s/AKfycbz-_MhTQpHGe4QDduXkLVuOJe1TKyRvtfDbNMCUwPP828W_C2A9XoB8IkhCE9J1XHYH/exec";
 
-const STOCK_BAJO = 2;
+// Se actualiza con el valor de Configuración al cargar
+let STOCK_BAJO = 2;
 
 
 // ======================================================
@@ -65,6 +66,12 @@ async function cargarProductos() {
     }
 
     productos = datos.productos || [];
+
+    if (Number.isInteger(datos.stockBajo) && datos.stockBajo >= 0) {
+      STOCK_BAJO = datos.stockBajo;
+      const opcion = document.querySelector('#filtroStock option[value="bajo"]');
+      if (opcion) opcion.textContent = `Stock bajo (${STOCK_BAJO} o menos)`;
+    }
 
     actualizarSugerencias();
     render();
