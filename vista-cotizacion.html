@@ -85,6 +85,13 @@
         Registrar venta
       </button>
 
+      <button
+        id="btnAnular"
+        class="btn-cotizacion-secundario btn-anular"
+        style="display:none;">
+        Anular
+      </button>
+
     </div>
 
 
@@ -352,6 +359,45 @@
 
           <button id="btnConfirmarVenta" class="btn-cotizacion-principal" disabled>
             Confirmar venta
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- VENTANA: ANULAR -->
+
+    <div
+      id="modalAnular"
+      class="modal-fondo"
+      style="display:none;">
+
+      <div class="modal-caja" role="dialog" aria-modal="true" aria-labelledby="tituloModalAnular">
+
+        <h3 id="tituloModalAnular">Anular cotización</h3>
+
+        <p id="textoAnular" class="modal-texto"></p>
+
+        <label class="modal-label" for="motivoAnulacion">Motivo</label>
+
+        <textarea
+          id="motivoAnulacion"
+          class="modal-motivo"
+          rows="3"
+          maxlength="200"
+          placeholder="Ej. La clienta desistió, error en la talla..."></textarea>
+
+        <div id="modalAnularError" class="modal-error"></div>
+
+        <div class="acciones-cotizacion">
+          <button id="btnCancelarAnular" class="btn-cotizacion-secundario">
+            Volver
+          </button>
+
+          <button id="btnConfirmarAnular" class="btn-cotizacion-principal btn-peligro" disabled>
+            Anular
           </button>
         </div>
 
