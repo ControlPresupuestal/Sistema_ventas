@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZAREINA | Caja</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/historial.css">
+  <link rel="stylesheet" href="css/ventas.css">
+  <link rel="stylesheet" href="css/productos.css">
+  <link rel="stylesheet" href="css/operaciones.css">
+</head>
+
+<body class="dashboard-page">
+
+  <header class="topbar">
+    <div class="topbar-marca">
+      <span class="estrella">✦</span>
+      <div>
+        <h1>ZAREINA</h1>
+        <small>Moda que eleva tu esencia</small>
+      </div>
+    </div>
+
+    <div class="usuario-header">
+      <div class="usuario-info">
+        <strong id="nombreUsuario"></strong>
+        <span id="rolUsuario"></span>
+      </div>
+
+      <div id="avatarUsuario" class="avatar"></div>
+
+      <a href="dashboard.html" class="btn-volver">
+        ← Inicio
+      </a>
+    </div>
+  </header>
+
+
+  <main class="cotizacion-contenedor">
+
+    <section class="cotizacion-titulo">
+      <div>
+        <span class="etiqueta-zareina">ADMINISTRACIÓN</span>
+        <h2>Cierre de caja</h2>
+        <p>Cuadra al final del día lo que entró por cada método de pago.</p>
+      </div>
+    </section>
+
+
+    <section class="cotizacion-card">
+
+      <div class="caja-cabecera">
+        <div class="campo-producto">
+          <label for="fecha">Día</label>
+          <input id="fecha" type="date">
+        </div>
+        <span id="estadoCaja" class="caja-estado">—</span>
+      </div>
+
+    </section>
+
+
+    <div id="cargandoCaja" class="op-estado">Cargando caja...</div>
+
+
+    <div id="contenidoCaja" style="display:none;">
+
+      <section class="cotizacion-card">
+
+        <div class="op-titulo-card">
+          <h3>Lo que entró</h3>
+          <small id="conteoMovimientos"></small>
+        </div>
+
+        <div class="tabla-responsive">
+          <table class="tabla-cotizacion caja-tabla">
+            <thead>
+              <tr>
+                <th>Método</th>
+                <th>Ventas</th>
+                <th>Pagos de separados</th>
+                <th>Cambios</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody id="tablaMovimientos"></tbody>
+            <tfoot>
+              <tr>
+                <td>Total del día</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td id="totalDia">S/ 0.00</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <p class="ing-ayuda">
+          Revisa Yape, Plin, transferencias y tarjeta contra tus aplicaciones.
+          El efectivo se cuadra abajo.
+        </p>
+
+      </section>
+
+
+      <section class="cotizacion-card">
+
+        <div class="op-titulo-card">
+          <h3>Cuadre de efectivo</h3>
+        </div>
+
+        <div class="caja-cuadre">
+          <div class="campo-producto">
+            <label for="fondo">Fondo inicial (S/)</label>
+            <input id="fondo" type="number" min="0" step="0.10" inputmode="decimal">
+          </div>
+          <div class="campo-producto">
+            <label for="salidas">Salidas de efectivo (S/)</label>
+            <input id="salidas" type="number" min="0" step="0.10" inputmode="decimal" placeholder="Gastos pagados con la caja">
+          </div>
+          <div class="campo-producto">
+            <label for="contado">Efectivo contado (S/)</label>
+            <input id="contado" type="number" min="0" step="0.10" inputmode="decimal" placeholder="Lo que hay en la caja">
+          </div>
+        </div>
+
+        <div class="caja-resultado">
+          <div>
+            <span>Efectivo que entró</span>
+            <strong id="rEntradas">S/ 0.00</strong>
+          </div>
+          <div>
+            <span>Debería haber</span>
+            <strong id="rEsperado">S/ 0.00</strong>
+          </div>
+          <div id="cajaDiferencia">
+            <span>Diferencia</span>
+            <strong id="rDiferencia">—</strong>
+          </div>
+        </div>
+
+        <div class="campo-producto" style="margin-top:14px;">
+          <label for="notaCaja">Nota <span class="config-opcional" style="font-weight:normal;color:#aa9a90;">opcional</span></label>
+          <textarea id="notaCaja" class="modal-motivo" rows="2" maxlength="300" placeholder="Ej. Se pagó el delivery con la caja"></textarea>
+        </div>
+
+        <div class="caja-acciones">
+          <button id="btnCerrarCaja" class="btn-cotizacion-principal" type="button">Guardar cierre</button>
+        </div>
+
+        <div id="mensajeCaja" class="op-mensaje" role="status" aria-live="polite"></div>
+
+      </section>
+
+
+      <section class="cotizacion-card">
+
+        <div class="op-titulo-card">
+          <h3>Cierres anteriores</h3>
+        </div>
+
+        <div class="tabla-responsive">
+          <table class="tabla-cotizacion historial-tabla">
+            <thead>
+              <tr>
+                <th>Día</th>
+                <th class="historial-derecha">Total del día</th>
+                <th class="historial-derecha">Efectivo esperado</th>
+                <th class="historial-derecha">Contado</th>
+                <th class="historial-derecha">Diferencia</th>
+                <th>Cerró</th>
+              </tr>
+            </thead>
+            <tbody id="historialCaja"></tbody>
+          </table>
+        </div>
+
+      </section>
+
+    </div>
+
+  </main>
+
+  <script src="js/caja.js"></script>
+
+</body>
+</html>
