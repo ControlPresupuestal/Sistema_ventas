@@ -178,9 +178,14 @@ btnVerMas.addEventListener("click", () => {
 
 function render() {
 
-  const monto = filtradas.reduce((suma, c) => suma + Number(c.total || 0), 0);
+  const vigentes = filtradas.filter(c => c.estado !== "ANULADA");
 
-  document.getElementById("resumenCantidad").textContent = filtradas.length;
+  const monto = vigentes.reduce((suma, c) => suma + Number(c.total || 0), 0);
+
+  document.getElementById("resumenCantidad").textContent =
+    vigentes.length + (filtradas.length > vigentes.length
+      ? ` (+${filtradas.length - vigentes.length} anulada${filtradas.length - vigentes.length > 1 ? "s" : ""})`
+      : "");
   document.getElementById("resumenMonto").textContent =
     monto.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -206,7 +211,7 @@ function render() {
       const url = `vista-cotizacion.html?numero=${encodeURIComponent(c.cotizacion)}`;
 
       return `
-        <tr class="historial-fila" data-url="${url}">
+        <tr class="historial-fila${c.estado === "ANULADA" ? " fila-anulada" : ""}" data-url="${url}">
           <td data-label="Venta">
             <strong>${escaparHTML(c.numero)}</strong>
             <small class="historial-sub">${escaparHTML(c.cotizacion)}</small>
@@ -216,6 +221,7 @@ function render() {
           <td data-label="Vendedora">${escaparHTML(c.usuario || "—")}</td>
           <td data-label="Pago">
             <span class="chip-pago">${escaparHTML(c.metodoPago || "—")}</span>
+            ${c.estado === "ANULADA" ? '<span class="estado-chip estado-anulado">ANULADA</span>' : ""}
           </td>
           <td data-label="Total" class="historial-derecha">
             <strong>S/ ${Number(c.total || 0).toFixed(2)}</strong>
