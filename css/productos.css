@@ -1,0 +1,143 @@
+/* ==================================
+   PRODUCTOS
+================================== */
+
+.productos-filtros {
+  grid-template-columns: 2.4fr 1.2fr 1fr auto;
+}
+
+.productos-resumen {
+  flex-wrap: wrap;
+}
+
+.productos-resumen .resumen-alerta {
+  background: #fbeee2;
+  border-color: #efcfb0;
+}
+
+.productos-resumen .resumen-alerta strong {
+  color: #a4602a;
+}
+
+/* Agrupar variantes del mismo producto */
+
+.productos-tabla tr.grupo-inicio td {
+  border-top: 2px solid #eadfd4;
+}
+
+.productos-tabla tbody tr:first-child td {
+  border-top: none;
+}
+
+.nombre-repetido {
+  color: #c2b3a8;
+  font-weight: normal;
+}
+
+.producto-inactivo td {
+  color: #aa9a90;
+}
+
+/* Stock */
+
+.chip-stock {
+  display: inline-block;
+  min-width: 34px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: bold;
+  font-size: 13px;
+  text-align: center;
+}
+
+.stock-ok {
+  background: #e3efe3;
+  color: #3d6b43;
+}
+
+.stock-bajo {
+  background: #fbeee2;
+  color: #a4602a;
+}
+
+.stock-agotado {
+  background: #f7e8e5;
+  color: #a64d43;
+}
+
+/* Botón editar */
+
+.btn-editar-producto {
+  border: none;
+  background: #f4ede6;
+  color: #6f442f;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-editar-producto:hover {
+  background: #ead9c5;
+}
+
+.solo-lectura .solo-admin-col {
+  display: none;
+}
+
+/* Formulario */
+
+.producto-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.producto-form-ancho {
+  grid-column: 1 / -1;
+}
+
+
+@media (max-width: 900px) {
+
+  .productos-filtros {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+
+@media (max-width: 650px) {
+
+  .productos-resumen > div {
+    flex: 1 1 40%;
+  }
+
+  .productos-tabla tr.grupo-inicio td {
+    border-top: none;
+  }
+
+  .productos-tabla tr.producto-fila {
+    border: 1px solid #eadfd4;
+    border-radius: 14px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+  }
+
+  .nombre-repetido {
+    color: #4c2d20;
+    font-weight: bold;
+  }
+
+  .productos-tabla td[data-label="Producto"] {
+    flex-wrap: wrap;
+  }
+
+  .btn-editar-producto {
+    width: 100%;
+    height: 40px;
+  }
+
+  .solo-lectura .productos-tabla td.solo-admin-col {
+    display: none;
+  }
+}
