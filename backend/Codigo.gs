@@ -7,6 +7,14 @@ const NOMBRE_HOJA_ANULACIONES = 'ANULACIONES';
 const NOMBRE_HOJA_CLIENTES = 'CLIENTES';
 const NOMBRE_HOJA_CONFIGURACION = 'CONFIGURACION';
 
+const NOMBRE_HOJA_SEPARADOS = 'SEPARADOS';
+const NOMBRE_HOJA_PAGOS_SEPARADO = 'PAGOS_SEPARADO';
+const NOMBRE_HOJA_CAMBIOS = 'CAMBIOS';
+const NOMBRE_HOJA_DETALLE_CAMBIO = 'DETALLE_CAMBIO';
+const NOMBRE_HOJA_INGRESOS = 'INGRESOS';
+const NOMBRE_HOJA_DETALLE_INGRESO = 'DETALLE_INGRESO';
+const NOMBRE_HOJA_CAJA = 'CAJA';
+
 // Nombre que se usa en la venta rápida cuando no se escribe cliente
 const CLIENTE_MOSTRADOR = 'Cliente de mostrador';
 
@@ -69,6 +77,18 @@ function doGet(e) {
     return resumenDelDia(p);
   }
 
+  if (accion === 'separados') {
+    return listarSeparados(p);
+  }
+
+  if (accion === 'ingresos') {
+    return listarIngresos(p);
+  }
+
+  if (accion === 'caja') {
+    return verCaja(p);
+  }
+
   if (accion === 'login' || accion === 'guardarcotizacion') {
     return responderJSON({
       ok: false,
@@ -113,6 +133,30 @@ function doPost(e) {
 
     if (accion === 'ventadirecta') {
       return ventaDirecta(datos);
+    }
+
+    if (accion === 'crearseparado') {
+      return crearSeparado(datos);
+    }
+
+    if (accion === 'pagarseparado') {
+      return pagarSeparado(datos);
+    }
+
+    if (accion === 'cancelarseparado') {
+      return cancelarSeparado(datos);
+    }
+
+    if (accion === 'registrarcambio') {
+      return registrarCambio(datos);
+    }
+
+    if (accion === 'registraringreso') {
+      return registrarIngreso(datos);
+    }
+
+    if (accion === 'cerrarcaja') {
+      return cerrarCaja(datos);
     }
 
     if (accion === 'anularcotizacion') {
@@ -688,6 +732,11 @@ function obtenerCotizacion(p) {
       productos: productos
     },
     clienteTelefono: telefonoDeCliente(ss, cabecera[2]),
+    separado: separadoDeCotizacion(ss, numero),
+    cambios: cambiosDeCotizacion(ss, numero),
+    articulosCliente: String(cabecera[6]).trim().toUpperCase() === 'VENDIDO'
+      ? articulosEnPoderDelCliente(ss, numero, productos)
+      : [],
     configuracion: leerConfiguracion()
   });
 }
@@ -757,7 +806,7 @@ function listarCotizaciones(p) {
 // el stock, marca la cotización como VENDIDO y registra
 // la venta en la hoja VENTAS.
 
-function registrarVenta(datos) {
+function registrarVenta(datos, interno) {
 
   const sesion = validarSesion(datos.token);
 
@@ -772,12 +821,18 @@ function registrarVenta(datos) {
     return responderJSON({ ok: false, mensaje: 'Falta el número de cotización.' });
   }
 
-  if (METODOS_PAGO.indexOf(metodoPago) === -1) {
-    return responderJSON({ ok: false, mensaje: 'Selecciona un método de pago válido.' });
-  }
+  // Al completar un separado el dinero ya entró en cada pago: la venta queda como "SEPARADO"
+  const desdeSeparado = interno === true && metodoPago === 'SEPARADO';
 
-  if (leerConfiguracion().metodosActivos.indexOf(metodoPago) === -1) {
-    return responderJSON({ ok: false, mensaje: 'Ese método de pago está desactivado en Configuración.' });
+  if (!desdeSeparado) {
+
+    if (METODOS_PAGO.indexOf(metodoPago) === -1) {
+      return responderJSON({ ok: false, mensaje: 'Selecciona un método de pago válido.' });
+    }
+
+    if (leerConfiguracion().metodosActivos.indexOf(metodoPago) === -1) {
+      return responderJSON({ ok: false, mensaje: 'Ese método de pago está desactivado en Configuración.' });
+    }
   }
 
   const lock = LockService.getScriptLock();
@@ -826,6 +881,10 @@ function registrarVenta(datos) {
       throw new Error('Esta cotización está anulada.');
     }
 
+    if (estadoActual === 'SEPARADO' && !desdeSeparado) {
+      throw new Error('Esta cotización está separada. Regístrale los pagos desde Separados.');
+    }
+
     // 2. Detalle
     const ultimaDet = hojaDetalle.getLastRow();
 
@@ -849,8 +908,12 @@ function registrarVenta(datos) {
     const ultimaProd = hojaProductos.getLastRow();
 
     const productosBD = hojaProductos
-      .getRange(2, 1, ultimaProd - 1, 7)
+      .getRange(2, 1, ultimaProd - 1, 8)
       .getValues();
+
+    // Costo de lo vendido (para calcular la ganancia). Vacío si falta el costo de algún producto.
+    let costoVenta = 0;
+    let costoCompleto = true;
 
     const descuentos = Object.keys(cantidadesPorId).map(id => {
 
@@ -869,6 +932,14 @@ function registrarVenta(datos) {
           'Stock insuficiente para "' + producto[1] + ' ' + producto[3] + ' ' + producto[2] +
           '". Disponible: ' + stockActual + ', requerido: ' + cantidad
         );
+      }
+
+      const costo = producto[7];
+
+      if (costo === '' || costo === null || isNaN(Number(costo))) {
+        costoCompleto = false;
+      } else {
+        costoVenta += Number(costo) * cantidad;
       }
 
       return { fila: indice + 2, nuevoStock: stockActual - cantidad };
@@ -895,8 +966,13 @@ function registrarVenta(datos) {
       total,
       metodoPago,
       textoSeguro(sesion.nombre),
-      'VIGENTE'
+      'VIGENTE',
+      costoCompleto ? Math.round(costoVenta * 100) / 100 : ''
     ]);
+
+    if (!hojaVentas.getRange(1, 9).getValue()) {
+      hojaVentas.getRange(1, 9).setValue('COSTO');
+    }
 
     SpreadsheetApp.flush();
 
@@ -1070,7 +1146,15 @@ function anularCotizacion(datos) {
       throw new Error('Esta cotización ya está anulada.');
     }
 
+    if (estadoActual === 'SEPARADO') {
+      throw new Error('Esta cotización está separada. Cancélala desde Separados.');
+    }
+
     const estabaVendida = estadoActual === 'VENDIDO';
+
+    if (estabaVendida && leerHoja(ss, NOMBRE_HOJA_CAMBIOS, 4).some(f => String(f[3]).trim().toUpperCase() === numero)) {
+      throw new Error('Esta venta tiene cambios registrados y ya no se puede anular.');
+    }
 
     if (estabaVendida && !esAdmin) {
       throw new Error('Solo la administradora puede anular una venta.');
@@ -1216,9 +1300,13 @@ function obtenerHojaAnulaciones(ss) {
 
 function listarInventario(p) {
 
-  if (!validarSesion(p.token)) {
+  const sesion = validarSesion(p.token);
+
+  if (!sesion) {
     return respuestaSesionVencida();
   }
+
+  const verCosto = esAdministradora(sesion);
 
   const hoja = SpreadsheetApp
     .getActiveSpreadsheet()
@@ -1233,7 +1321,7 @@ function listarInventario(p) {
   }
 
   const productos = hoja
-    .getRange(2, 1, hoja.getLastRow() - 1, 7)
+    .getRange(2, 1, hoja.getLastRow() - 1, 8)
     .getValues()
     .filter(fila => String(fila[0]).trim())
     .map(fila => ({
@@ -1243,7 +1331,8 @@ function listarInventario(p) {
       talla: String(fila[3]).trim(),
       precio: Number(fila[4]) || 0,
       stock: Number(fila[5]) || 0,
-      estado: String(fila[6]).trim().toUpperCase() === 'INACTIVO' ? 'INACTIVO' : 'ACTIVO'
+      estado: String(fila[6]).trim().toUpperCase() === 'INACTIVO' ? 'INACTIVO' : 'ACTIVO',
+      costo: verCosto && fila[7] !== '' && !isNaN(Number(fila[7])) ? Number(fila[7]) : null
     }));
 
   return responderJSON({ ok: true, productos: productos, stockBajo: leerConfiguracion().stockBajo });
@@ -1683,7 +1772,7 @@ function obtenerReportes(p) {
   const ventasVigentes = [];
   let anuladas = 0;
 
-  leerHoja(ss, NOMBRE_HOJA_VENTAS, 8).forEach(fila => {
+  leerHoja(ss, NOMBRE_HOJA_VENTAS, 9).forEach(fila => {
     if (!String(fila[0]).trim()) return;
     const f = fechaISO(fila[1]);
     if (!enRango(f)) return;
@@ -1693,7 +1782,8 @@ function obtenerReportes(p) {
       cotizacion: String(fila[2]).trim().toUpperCase(),
       total: Number(fila[4]) || 0,
       metodo: String(fila[5] || '').trim() || 'SIN DATO',
-      vendedora: String(fila[6] || '').trim() || 'Sin registrar'
+      vendedora: String(fila[6] || '').trim() || 'Sin registrar',
+      costo: fila[8] === '' || fila[8] === null || isNaN(Number(fila[8])) ? null : Number(fila[8])
     });
   });
 
@@ -1764,6 +1854,8 @@ function obtenerReportes(p) {
       ticketPromedio: ventasVigentes.length ? Math.round(totalVendido / ventasVigentes.length * 100) / 100 : 0,
       cotizaciones: cotizacionesRango,
       anuladas: anuladas,
+      ganancia: Math.round(ventasVigentes.filter(v => v.costo !== null).reduce((s, v) => s + v.total - v.costo, 0) * 100) / 100,
+      ventasConCosto: ventasVigentes.filter(v => v.costo !== null).length,
       porDia: porDia,
       porMetodo: redondear(agrupar(ventasVigentes, 'metodo')),
       porVendedora: redondear(agrupar(ventasVigentes, 'vendedora')),
@@ -2306,6 +2398,977 @@ function resumenDelDia(p) {
       productosBajos: bajos.slice(0, 6)
     }
   });
+}
+
+
+// ======================================================
+// UTILIDADES PARA HOJAS NUEVAS
+// ======================================================
+
+function obtenerHoja(ss, nombre, encabezados) {
+
+  let hoja = ss.getSheetByName(nombre);
+
+  if (!hoja) {
+    hoja = ss.insertSheet(nombre);
+    hoja.appendRow(encabezados);
+    hoja.setFrozenRows(1);
+  }
+
+  return hoja;
+}
+
+
+function siguienteNumero(hoja, prefijo) {
+
+  let mayor = 0;
+  const patron = new RegExp('^' + prefijo + '-(\\d+)$', 'i');
+
+  if (hoja.getLastRow() >= 2) {
+    hoja.getRange(2, 1, hoja.getLastRow() - 1, 1).getDisplayValues().flat().forEach(v => {
+      const m = String(v).match(patron);
+      if (m) mayor = Math.max(mayor, Number(m[1]));
+    });
+  }
+
+  return prefijo + '-' + String(mayor + 1).padStart(6, '0');
+}
+
+
+function redondear2(n) {
+  return Math.round((Number(n) || 0) * 100) / 100;
+}
+
+
+function fechaHora(valor) {
+  const fecha = valor instanceof Date ? valor : new Date(valor);
+  return isNaN(fecha.getTime())
+    ? ''
+    : Utilities.formatDate(fecha, Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm');
+}
+
+
+function validarMetodoActivo(metodo) {
+  if (METODOS_PAGO.indexOf(metodo) === -1 || leerConfiguracion().metodosActivos.indexOf(metodo) === -1) {
+    throw new Error('Selecciona un método de pago activo.');
+  }
+}
+
+
+// Busca la fila de una cotización (índice 0 = fila 2)
+function buscarCotizacion(hojaCotizaciones, numero) {
+
+  const filas = hojaCotizaciones.getLastRow() < 2 ? [] : hojaCotizaciones
+    .getRange(2, 1, hojaCotizaciones.getLastRow() - 1, 8)
+    .getValues();
+
+  const indice = filas.findIndex(f => String(f[0]).trim().toUpperCase() === numero);
+
+  return indice === -1 ? null : { fila: indice + 2, datos: filas[indice] };
+}
+
+
+// ======================================================
+// SEPARADOS (adelantos). El stock no se toca hasta completar el pago.
+// ======================================================
+
+function hojaSeparados(ss) {
+  return obtenerHoja(ss, NOMBRE_HOJA_SEPARADOS,
+    ['NUMERO', 'FECHA', 'COTIZACION', 'CLIENTE', 'TOTAL', 'PAGADO', 'SALDO', 'ESTADO', 'USUARIO', 'NOTA']);
+}
+
+
+function hojaPagosSeparado(ss) {
+  return obtenerHoja(ss, NOMBRE_HOJA_PAGOS_SEPARADO,
+    ['SEPARADO', 'FECHA', 'MONTO', 'METODO_PAGO', 'USUARIO']);
+}
+
+
+function separadoDeCotizacion(ss, numero) {
+
+  try {
+
+    const fila = leerHoja(ss, NOMBRE_HOJA_SEPARADOS, 10).find(f =>
+      String(f[2]).trim().toUpperCase() === numero &&
+      String(f[7]).trim().toUpperCase() === 'PENDIENTE');
+
+    return fila ? {
+      numero: String(fila[0]).trim(),
+      total: Number(fila[4]) || 0,
+      pagado: Number(fila[5]) || 0,
+      saldo: Number(fila[6]) || 0
+    } : null;
+
+  } catch (error) {
+    return null;
+  }
+}
+
+
+function crearSeparado(datos) {
+
+  const sesion = validarSesion(datos.token);
+
+  if (!sesion) {
+    return respuestaSesionVencida();
+  }
+
+  const numero = String(datos.numero || '').trim().toUpperCase();
+  const adelanto = redondear2(datos.adelanto);
+  const metodo = String(datos.metodoPago || '').trim().toUpperCase();
+  const nota = String(datos.nota || '').trim().slice(0, 200);
+
+  const lock = LockService.getScriptLock();
+
+  try {
+
+    validarMetodoActivo(metodo);
+
+    if (!(adelanto > 0)) {
+      throw new Error('Escribe el monto del adelanto.');
+    }
+
+    lock.waitLock(15000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const hojaCot = ss.getSheetByName(NOMBRE_HOJA_COTIZACIONES);
+    const cot = buscarCotizacion(hojaCot, numero);
+
+    if (!cot) {
+      throw new Error('No se encontró la cotización ' + numero);
+    }
+
+    const estado = String(cot.datos[6]).trim().toUpperCase();
+
+    if (estado !== 'COTIZADO') {
+      throw new Error('Solo se puede separar una cotización pendiente (está ' + estado + ').');
+    }
+
+    const total = redondear2(cot.datos[5]);
+
+    if (adelanto >= total) {
+      throw new Error('El adelanto cubre todo el total: usa "Registrar venta".');
+    }
+
+    const hoja = hojaSeparados(ss);
+    const numeroSep = siguienteNumero(hoja, 'SEP');
+    const ahora = new Date();
+
+    hoja.appendRow([
+      numeroSep, ahora, numero, textoSeguro(cot.datos[2]),
+      total, adelanto, redondear2(total - adelanto), 'PENDIENTE',
+      textoSeguro(sesion.nombre), textoSeguro(nota)
+    ]);
+
+    hojaPagosSeparado(ss).appendRow([numeroSep, ahora, adelanto, metodo, textoSeguro(sesion.nombre)]);
+
+    hojaCot.getRange(cot.fila, 7).setValue('SEPARADO');
+
+    SpreadsheetApp.flush();
+
+    return responderJSON({
+      ok: true,
+      separado: { numero: numeroSep, total: total, pagado: adelanto, saldo: redondear2(total - adelanto) }
+    });
+
+  } catch (error) {
+
+    return responderJSON({ ok: false, mensaje: error.message });
+
+  } finally {
+
+    lock.releaseLock();
+  }
+}
+
+
+function listarSeparados(p) {
+
+  if (!validarSesion(p.token)) {
+    return respuestaSesionVencida();
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  const pagos = {};
+
+  leerHoja(ss, NOMBRE_HOJA_PAGOS_SEPARADO, 5).forEach(f => {
+    const k = String(f[0]).trim();
+    if (!k) return;
+    (pagos[k] = pagos[k] || []).push({
+      fecha: fechaHora(f[1]),
+      monto: Number(f[2]) || 0,
+      metodo: String(f[3]).trim(),
+      usuario: String(f[4]).trim()
+    });
+  });
+
+  const telefonos = {};
+
+  leerHoja(ss, NOMBRE_HOJA_CLIENTES, 3).forEach(f => {
+    telefonos[normalizarTexto(f[1])] = String(f[2]).trim();
+  });
+
+  const hoy = new Date();
+
+  const separados = leerHoja(ss, NOMBRE_HOJA_SEPARADOS, 10)
+    .filter(f => String(f[0]).trim())
+    .map(f => {
+      const fecha = f[1] instanceof Date ? f[1] : new Date(f[1]);
+      return {
+        numero: String(f[0]).trim(),
+        fecha: fechaISO(f[1]),
+        dias: isNaN(fecha.getTime()) ? 0 : Math.floor((hoy - fecha) / 86400000),
+        cotizacion: String(f[2]).trim(),
+        cliente: String(f[3]).trim(),
+        telefono: telefonos[normalizarTexto(f[3])] || '',
+        total: Number(f[4]) || 0,
+        pagado: Number(f[5]) || 0,
+        saldo: Number(f[6]) || 0,
+        estado: String(f[7]).trim().toUpperCase(),
+        usuario: String(f[8]).trim(),
+        nota: String(f[9]).trim(),
+        pagos: pagos[String(f[0]).trim()] || []
+      };
+    })
+    .reverse();
+
+  return responderJSON({ ok: true, separados: separados });
+}
+
+
+function pagarSeparado(datos) {
+
+  const sesion = validarSesion(datos.token);
+
+  if (!sesion) {
+    return respuestaSesionVencida();
+  }
+
+  const numeroSep = String(datos.numero || '').trim().toUpperCase();
+  const monto = redondear2(datos.monto);
+  const metodo = String(datos.metodoPago || '').trim().toUpperCase();
+
+  try {
+
+    validarMetodoActivo(metodo);
+
+    if (!(monto > 0)) {
+      throw new Error('Escribe el monto del pago.');
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const hoja = hojaSeparados(ss);
+    const filas = leerHoja(ss, NOMBRE_HOJA_SEPARADOS, 10);
+    const indice = filas.findIndex(f => String(f[0]).trim().toUpperCase() === numeroSep);
+
+    if (indice === -1) {
+      throw new Error('No se encontró el separado ' + numeroSep);
+    }
+
+    const sep = filas[indice];
+
+    if (String(sep[7]).trim().toUpperCase() !== 'PENDIENTE') {
+      throw new Error('Este separado ya no está pendiente.');
+    }
+
+    const saldo = redondear2(sep[6]);
+
+    if (monto > saldo + 0.001) {
+      throw new Error('El pago (S/ ' + monto.toFixed(2) + ') es mayor que el saldo (S/ ' + saldo.toFixed(2) + ').');
+    }
+
+    const completa = Math.abs(saldo - monto) < 0.005;
+    let venta = null;
+
+    // Último pago: se registra la venta (descuenta stock) antes de guardar el pago
+    if (completa) {
+
+      const resultado = leerRespuesta(registrarVenta({
+        token: datos.token,
+        numero: String(sep[2]).trim().toUpperCase(),
+        metodoPago: 'SEPARADO'
+      }, true));
+
+      if (!resultado.ok) {
+        throw new Error('No se pudo completar: ' + resultado.mensaje);
+      }
+
+      venta = resultado.venta;
+    }
+
+    const lock = LockService.getScriptLock();
+
+    try {
+
+      lock.waitLock(15000);
+
+      const pagado = redondear2(Number(sep[5]) + monto);
+      const nuevoSaldo = completa ? 0 : redondear2(saldo - monto);
+
+      hoja.getRange(indice + 2, 6, 1, 3).setValues([[pagado, nuevoSaldo, completa ? 'COMPLETADO' : 'PENDIENTE']]);
+      hojaPagosSeparado(ss).appendRow([numeroSep, new Date(), monto, metodo, textoSeguro(sesion.nombre)]);
+
+      SpreadsheetApp.flush();
+
+      return responderJSON({ ok: true, completado: completa, pagado: pagado, saldo: nuevoSaldo, venta: venta });
+
+    } finally {
+
+      lock.releaseLock();
+    }
+
+  } catch (error) {
+
+    return responderJSON({ ok: false, mensaje: error.message });
+  }
+}
+
+
+function cancelarSeparado(datos) {
+
+  const sesion = validarSesion(datos.token);
+
+  if (!sesion) {
+    return respuestaSesionVencida();
+  }
+
+  if (!esAdministradora(sesion)) {
+    return responderJSON({ ok: false, mensaje: 'Solo la administradora puede cancelar un separado.' });
+  }
+
+  const numeroSep = String(datos.numero || '').trim().toUpperCase();
+  const motivo = String(datos.motivo || '').trim().slice(0, 200);
+
+  if (motivo.length < 3) {
+    return responderJSON({ ok: false, mensaje: 'Escribe el motivo de la cancelación.' });
+  }
+
+  const lock = LockService.getScriptLock();
+
+  try {
+
+    lock.waitLock(15000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const hoja = hojaSeparados(ss);
+    const filas = leerHoja(ss, NOMBRE_HOJA_SEPARADOS, 10);
+    const indice = filas.findIndex(f => String(f[0]).trim().toUpperCase() === numeroSep);
+
+    if (indice === -1) {
+      throw new Error('No se encontró el separado ' + numeroSep);
+    }
+
+    if (String(filas[indice][7]).trim().toUpperCase() !== 'PENDIENTE') {
+      throw new Error('Este separado ya no está pendiente.');
+    }
+
+    const nota = [String(filas[indice][9] || '').trim(), 'Cancelado: ' + motivo].filter(Boolean).join(' · ');
+
+    hoja.getRange(indice + 2, 8).setValue('CANCELADO');
+    hoja.getRange(indice + 2, 10).setValue(textoSeguro(nota));
+
+    // La cotización queda anulada (el stock nunca se descontó)
+    const hojaCot = ss.getSheetByName(NOMBRE_HOJA_COTIZACIONES);
+    const cot = buscarCotizacion(hojaCot, String(filas[indice][2]).trim().toUpperCase());
+
+    if (cot && String(cot.datos[6]).trim().toUpperCase() === 'SEPARADO') {
+      hojaCot.getRange(cot.fila, 7).setValue('ANULADO');
+    }
+
+    SpreadsheetApp.flush();
+
+    return responderJSON({ ok: true });
+
+  } catch (error) {
+
+    return responderJSON({ ok: false, mensaje: error.message });
+
+  } finally {
+
+    lock.releaseLock();
+  }
+}
+
+
+// ======================================================
+// CAMBIOS (solo cambios, no se devuelve dinero)
+// ======================================================
+
+function cambiosDeCotizacion(ss, numero) {
+
+  try {
+    return leerHoja(ss, NOMBRE_HOJA_CAMBIOS, 11)
+      .filter(f => String(f[3]).trim().toUpperCase() === numero)
+      .map(f => ({
+        numero: String(f[0]).trim(),
+        fecha: fechaHora(f[1]),
+        devuelto: Number(f[5]) || 0,
+        nuevo: Number(f[6]) || 0,
+        diferencia: Number(f[7]) || 0,
+        metodo: String(f[8]).trim(),
+        motivo: String(f[9]).trim()
+      }));
+  } catch (error) {
+    return [];
+  }
+}
+
+
+// Lo que la clienta tiene hoy de esa compra: lo comprado + lo que se llevó en cambios − lo devuelto
+function articulosEnPoderDelCliente(ss, numero, productosOriginales) {
+
+  const mapa = {};
+
+  const sumar = (id, datos, cantidad) => {
+    mapa[id] = mapa[id] || Object.assign({ id: id, cantidad: 0 }, datos);
+    mapa[id].cantidad += cantidad;
+  };
+
+  (productosOriginales || []).forEach(p => sumar(p.id, {
+    producto: p.producto, talla: p.talla, color: p.color, precio: Number(p.precio) || 0
+  }, Number(p.cantidad) || 0));
+
+  const cambios = {};
+  leerHoja(ss, NOMBRE_HOJA_CAMBIOS, 4).forEach(f => {
+    if (String(f[3]).trim().toUpperCase() === numero) cambios[String(f[0]).trim()] = true;
+  });
+
+  leerHoja(ss, NOMBRE_HOJA_DETALLE_CAMBIO, 8).forEach(f => {
+    if (!cambios[String(f[0]).trim()]) return;
+    const signo = String(f[1]).trim().toUpperCase() === 'LLEVA' ? 1 : -1;
+    sumar(String(f[2]).trim(), {
+      producto: String(f[3]), talla: String(f[4]), color: String(f[5]), precio: Number(f[7]) || 0
+    }, signo * (Number(f[6]) || 0));
+  });
+
+  return Object.keys(mapa).map(k => mapa[k]).filter(x => x.cantidad > 0);
+}
+
+
+function registrarCambio(datos) {
+
+  const sesion = validarSesion(datos.token);
+
+  if (!sesion) {
+    return respuestaSesionVencida();
+  }
+
+  const numero = String(datos.numero || '').trim().toUpperCase();
+  const motivo = String(datos.motivo || '').trim().slice(0, 200);
+
+  const limpiar = lista => {
+    const mapa = {};
+    (Array.isArray(lista) ? lista : []).forEach(x => {
+      const id = String(x.id || '').trim();
+      const cantidad = Number(x.cantidad);
+      if (!id || !Number.isInteger(cantidad) || cantidad <= 0) return;
+      mapa[id] = (mapa[id] || 0) + cantidad;
+    });
+    return mapa;
+  };
+
+  const devuelve = limpiar(datos.devuelve);
+  const lleva = limpiar(datos.lleva);
+
+  if (!Object.keys(devuelve).length) {
+    return responderJSON({ ok: false, mensaje: 'Elige qué prenda devuelve la clienta.' });
+  }
+
+  if (!Object.keys(lleva).length) {
+    return responderJSON({ ok: false, mensaje: 'Elige qué prenda se lleva a cambio.' });
+  }
+
+  if (motivo.length < 3) {
+    return responderJSON({ ok: false, mensaje: 'Escribe el motivo del cambio.' });
+  }
+
+  const lock = LockService.getScriptLock();
+
+  try {
+
+    lock.waitLock(15000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const hojaCot = ss.getSheetByName(NOMBRE_HOJA_COTIZACIONES);
+    const cot = buscarCotizacion(hojaCot, numero);
+
+    if (!cot || String(cot.datos[6]).trim().toUpperCase() !== 'VENDIDO') {
+      throw new Error('Solo se pueden hacer cambios de una venta registrada.');
+    }
+
+    const venta = leerHoja(ss, NOMBRE_HOJA_VENTAS, 8).find(f =>
+      String(f[2]).trim().toUpperCase() === numero &&
+      String(f[7] || '').trim().toUpperCase() !== 'ANULADA');
+
+    if (!venta) {
+      throw new Error('No se encontró la venta de esta cotización.');
+    }
+
+    // Lo que la clienta tiene
+    const original = leerHoja(ss, NOMBRE_HOJA_DETALLE, 8)
+      .filter(f => String(f[0]).trim().toUpperCase() === numero)
+      .map(f => ({ id: String(f[1]).trim(), producto: f[2], talla: f[3], color: f[4], cantidad: Number(f[5]) || 0, precio: Number(f[6]) || 0 }));
+
+    const enPoder = {};
+    articulosEnPoderDelCliente(ss, numero, original).forEach(x => { enPoder[x.id] = x; });
+
+    let totalDevuelto = 0;
+
+    Object.keys(devuelve).forEach(id => {
+      const x = enPoder[id];
+      if (!x || x.cantidad < devuelve[id]) {
+        throw new Error('La clienta no tiene ' + devuelve[id] + ' unidad(es) de ' + (x ? x.producto : id) + ' en esta compra.');
+      }
+      totalDevuelto += x.precio * devuelve[id];
+    });
+
+    // Productos
+    const hojaProd = ss.getSheetByName(NOMBRE_HOJA_PRODUCTOS);
+    const prods = hojaProd.getRange(2, 1, hojaProd.getLastRow() - 1, 7).getValues();
+    const indiceDe = id => prods.findIndex(f => String(f[0]).trim() === id);
+
+    let totalNuevo = 0;
+
+    Object.keys(lleva).forEach(id => {
+      const i = indiceDe(id);
+      if (i === -1) throw new Error('No se encontró el producto ' + id);
+      if (String(prods[i][6]).trim().toUpperCase() === 'INACTIVO') throw new Error('"' + prods[i][1] + '" está inactivo.');
+      totalNuevo += (Number(prods[i][4]) || 0) * lleva[id];
+    });
+
+    // Stock: primero entra lo devuelto, luego sale lo nuevo
+    const cambiosStock = {};
+    Object.keys(devuelve).forEach(id => { cambiosStock[id] = (cambiosStock[id] || 0) + devuelve[id]; });
+    Object.keys(lleva).forEach(id => { cambiosStock[id] = (cambiosStock[id] || 0) - lleva[id]; });
+
+    const escrituras = Object.keys(cambiosStock).map(id => {
+      const i = indiceDe(id);
+      if (i === -1) throw new Error('El producto ' + id + ' ya no existe en PRODUCTOS.');
+      const nuevo = (Number(prods[i][5]) || 0) + cambiosStock[id];
+      if (nuevo < 0) {
+        throw new Error('Stock insuficiente para "' + prods[i][1] + ' ' + prods[i][3] + ' ' + prods[i][2] + '". Disponible: ' + prods[i][5]);
+      }
+      return { fila: i + 2, stock: nuevo };
+    });
+
+    totalDevuelto = redondear2(totalDevuelto);
+    totalNuevo = redondear2(totalNuevo);
+    const diferencia = redondear2(totalNuevo - totalDevuelto);
+
+    let metodo = '';
+
+    if (diferencia > 0) {
+      metodo = String(datos.metodoPago || '').trim().toUpperCase();
+      validarMetodoActivo(metodo);
+    }
+
+    escrituras.forEach(e => hojaProd.getRange(e.fila, 6).setValue(e.stock));
+
+    const hojaCambios = obtenerHoja(ss, NOMBRE_HOJA_CAMBIOS,
+      ['NUMERO', 'FECHA', 'VENTA', 'COTIZACION', 'CLIENTE', 'DEVUELTO', 'NUEVO', 'DIFERENCIA', 'METODO_PAGO', 'MOTIVO', 'USUARIO']);
+    const hojaDetalle = obtenerHoja(ss, NOMBRE_HOJA_DETALLE_CAMBIO,
+      ['CAMBIO', 'TIPO', 'ID_PRODUCTO', 'PRODUCTO', 'TALLA', 'COLOR', 'CANTIDAD', 'PRECIO']);
+
+    const numeroCambio = siguienteNumero(hojaCambios, 'CAM');
+
+    hojaCambios.appendRow([
+      numeroCambio, new Date(), String(venta[0]).trim(), numero, textoSeguro(cot.datos[2]),
+      totalDevuelto, totalNuevo, Math.max(diferencia, 0), metodo, textoSeguro(motivo), textoSeguro(sesion.nombre)
+    ]);
+
+    const filasDetalle = [];
+
+    Object.keys(devuelve).forEach(id => {
+      const x = enPoder[id];
+      filasDetalle.push([numeroCambio, 'DEVUELVE', id, textoSeguro(x.producto), textoSeguro(x.talla), textoSeguro(x.color), devuelve[id], x.precio]);
+    });
+
+    Object.keys(lleva).forEach(id => {
+      const f = prods[indiceDe(id)];
+      filasDetalle.push([numeroCambio, 'LLEVA', id, textoSeguro(f[1]), textoSeguro(f[3]), textoSeguro(f[2]), lleva[id], Number(f[4]) || 0]);
+    });
+
+    hojaDetalle.getRange(hojaDetalle.getLastRow() + 1, 1, filasDetalle.length, 8).setValues(filasDetalle);
+
+    SpreadsheetApp.flush();
+
+    return responderJSON({
+      ok: true,
+      cambio: {
+        numero: numeroCambio,
+        devuelto: totalDevuelto,
+        nuevo: totalNuevo,
+        cobrado: Math.max(diferencia, 0),
+        saldoNoDevuelto: diferencia < 0 ? -diferencia : 0,
+        metodo: metodo
+      }
+    });
+
+  } catch (error) {
+
+    return responderJSON({ ok: false, mensaje: error.message });
+
+  } finally {
+
+    lock.releaseLock();
+  }
+}
+
+
+// ======================================================
+// INGRESO DE MERCADERÍA (solo administradora)
+// ======================================================
+
+function registrarIngreso(datos) {
+
+  const sesion = validarSesion(datos.token);
+
+  if (!sesion) {
+    return respuestaSesionVencida();
+  }
+
+  if (!esAdministradora(sesion)) {
+    return responderJSON({ ok: false, mensaje: 'Solo la administradora puede registrar mercadería.' });
+  }
+
+  const proveedor = String(datos.proveedor || '').trim().replace(/\s+/g, ' ').slice(0, 80);
+  const nota = String(datos.nota || '').trim().slice(0, 200);
+  const items = Array.isArray(datos.items) ? datos.items : [];
+
+  const lock = LockService.getScriptLock();
+
+  try {
+
+    if (proveedor.length < 2) {
+      throw new Error('Escribe el proveedor.');
+    }
+
+    if (!items.length) {
+      throw new Error('Agrega al menos un producto.');
+    }
+
+    // Unir líneas del mismo producto
+    const lineas = {};
+
+    items.forEach(x => {
+      const id = String(x.id || '').trim();
+      const cantidad = Number(x.cantidad);
+      const costo = Number(x.costo);
+      if (!id) throw new Error('Producto sin código.');
+      if (!Number.isInteger(cantidad) || cantidad <= 0) throw new Error('Cantidad inválida.');
+      if (!(costo >= 0) || costo > 100000) throw new Error('Costo inválido.');
+      const l = lineas[id] || (lineas[id] = { cantidad: 0, total: 0 });
+      l.cantidad += cantidad;
+      l.total += cantidad * costo;
+    });
+
+    lock.waitLock(15000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const hojaProd = ss.getSheetByName(NOMBRE_HOJA_PRODUCTOS);
+
+    if (!hojaProd || hojaProd.getLastRow() < 2) {
+      throw new Error('No hay productos registrados.');
+    }
+
+    const prods = hojaProd.getRange(2, 1, hojaProd.getLastRow() - 1, 8).getValues();
+
+    if (!hojaProd.getRange(1, 8).getValue()) {
+      hojaProd.getRange(1, 8).setValue('COSTO');
+    }
+
+    const hojaIng = obtenerHoja(ss, NOMBRE_HOJA_INGRESOS,
+      ['NUMERO', 'FECHA', 'PROVEEDOR', 'UNIDADES', 'TOTAL_COSTO', 'NOTA', 'USUARIO']);
+    const hojaDet = obtenerHoja(ss, NOMBRE_HOJA_DETALLE_INGRESO,
+      ['INGRESO', 'ID_PRODUCTO', 'PRODUCTO', 'TALLA', 'COLOR', 'CANTIDAD', 'COSTO_UNITARIO', 'SUBTOTAL']);
+
+    const numero = siguienteNumero(hojaIng, 'ING');
+
+    const escrituras = [];
+    const detalle = [];
+    let unidades = 0;
+    let totalCosto = 0;
+
+    Object.keys(lineas).forEach(id => {
+
+      const i = prods.findIndex(f => String(f[0]).trim() === id);
+
+      if (i === -1) {
+        throw new Error('No se encontró el producto ' + id);
+      }
+
+      const f = prods[i];
+      const l = lineas[id];
+      const costoUnit = l.total / l.cantidad;
+      const stockAntes = Math.max(Number(f[5]) || 0, 0);
+      const costoAntes = f[7] === '' || isNaN(Number(f[7])) ? null : Number(f[7]);
+
+      // Costo promedio: mezcla lo que había con lo que entra
+      const costoNuevo = costoAntes === null || stockAntes === 0
+        ? costoUnit
+        : (stockAntes * costoAntes + l.total) / (stockAntes + l.cantidad);
+
+      escrituras.push({ fila: i + 2, stock: (Number(f[5]) || 0) + l.cantidad, costo: redondear2(costoNuevo) });
+      detalle.push([numero, id, textoSeguro(f[1]), textoSeguro(f[3]), textoSeguro(f[2]), l.cantidad, redondear2(costoUnit), redondear2(l.total)]);
+
+      unidades += l.cantidad;
+      totalCosto += l.total;
+    });
+
+    escrituras.forEach(e => {
+      hojaProd.getRange(e.fila, 6).setValue(e.stock);
+      hojaProd.getRange(e.fila, 8).setValue(e.costo);
+    });
+
+    hojaIng.appendRow([numero, new Date(), textoSeguro(proveedor), unidades, redondear2(totalCosto), textoSeguro(nota), textoSeguro(sesion.nombre)]);
+    hojaDet.getRange(hojaDet.getLastRow() + 1, 1, detalle.length, 8).setValues(detalle);
+
+    SpreadsheetApp.flush();
+
+    return responderJSON({ ok: true, ingreso: { numero: numero, unidades: unidades, total: redondear2(totalCosto) } });
+
+  } catch (error) {
+
+    return responderJSON({ ok: false, mensaje: error.message });
+
+  } finally {
+
+    lock.releaseLock();
+  }
+}
+
+
+function listarIngresos(p) {
+
+  const sesion = validarSesion(p.token);
+
+  if (!sesion) {
+    return respuestaSesionVencida();
+  }
+
+  if (!esAdministradora(sesion)) {
+    return responderJSON({ ok: false, mensaje: 'Solo la administradora puede ver la mercadería.' });
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const detalle = {};
+
+  leerHoja(ss, NOMBRE_HOJA_DETALLE_INGRESO, 8).forEach(f => {
+    const k = String(f[0]).trim();
+    if (!k) return;
+    (detalle[k] = detalle[k] || []).push({
+      id: String(f[1]).trim(), producto: String(f[2]), talla: String(f[3]), color: String(f[4]),
+      cantidad: Number(f[5]) || 0, costo: Number(f[6]) || 0, subtotal: Number(f[7]) || 0
+    });
+  });
+
+  const ingresos = leerHoja(ss, NOMBRE_HOJA_INGRESOS, 7)
+    .filter(f => String(f[0]).trim())
+    .map(f => ({
+      numero: String(f[0]).trim(),
+      fecha: fechaHora(f[1]),
+      fechaISO: fechaISO(f[1]),
+      proveedor: String(f[2]).trim(),
+      unidades: Number(f[3]) || 0,
+      total: Number(f[4]) || 0,
+      nota: String(f[5]).trim(),
+      usuario: String(f[6]).trim(),
+      detalle: detalle[String(f[0]).trim()] || []
+    }))
+    .reverse();
+
+  const proveedores = [...new Set(ingresos.map(i => i.proveedor).filter(Boolean))].sort();
+
+  return responderJSON({ ok: true, ingresos: ingresos.slice(0, 100), proveedores: proveedores });
+}
+
+
+// ======================================================
+// CIERRE DE CAJA (solo administradora)
+// ======================================================
+
+function hojaCaja(ss) {
+  return obtenerHoja(ss, NOMBRE_HOJA_CAJA, [
+    'FECHA', 'FONDO_INICIAL', 'EFECTIVO_ENTRADAS', 'SALIDAS', 'EFECTIVO_ESPERADO', 'EFECTIVO_CONTADO',
+    'DIFERENCIA', 'OTROS_METODOS', 'TOTAL_INGRESOS', 'NOTA', 'USUARIO', 'REGISTRADO'
+  ]);
+}
+
+
+// Todo el dinero que entró en una fecha (yyyy-MM-dd), por método y por origen
+function movimientosDelDia(ss, fecha) {
+
+  const porMetodo = {};
+  const suma = (metodo, origen, monto) => {
+    const m = porMetodo[metodo] || (porMetodo[metodo] = { ventas: 0, separados: 0, cambios: 0, total: 0 });
+    m[origen] += monto;
+    m.total += monto;
+  };
+
+  let ventas = 0;
+  let pagosSeparado = 0;
+  let cambios = 0;
+
+  leerHoja(ss, NOMBRE_HOJA_VENTAS, 8).forEach(f => {
+    if (!String(f[0]).trim() || fechaISO(f[1]) !== fecha) return;
+    if (String(f[7] || '').trim().toUpperCase() === 'ANULADA') return;
+    const metodo = String(f[5] || '').trim().toUpperCase();
+    if (metodo === 'SEPARADO') return; // ya se contó en cada pago del separado
+    suma(metodo || 'SIN DATO', 'ventas', Number(f[4]) || 0);
+    ventas += 1;
+  });
+
+  leerHoja(ss, NOMBRE_HOJA_PAGOS_SEPARADO, 5).forEach(f => {
+    if (!String(f[0]).trim() || fechaISO(f[1]) !== fecha) return;
+    suma(String(f[3]).trim().toUpperCase() || 'SIN DATO', 'separados', Number(f[2]) || 0);
+    pagosSeparado += 1;
+  });
+
+  leerHoja(ss, NOMBRE_HOJA_CAMBIOS, 9).forEach(f => {
+    if (!String(f[0]).trim() || fechaISO(f[1]) !== fecha) return;
+    const monto = Number(f[7]) || 0;
+    if (monto <= 0) return;
+    suma(String(f[8]).trim().toUpperCase() || 'SIN DATO', 'cambios', monto);
+    cambios += 1;
+  });
+
+  const metodos = Object.keys(porMetodo).map(k => ({
+    metodo: k,
+    ventas: redondear2(porMetodo[k].ventas),
+    separados: redondear2(porMetodo[k].separados),
+    cambios: redondear2(porMetodo[k].cambios),
+    total: redondear2(porMetodo[k].total)
+  })).sort((a, b) => b.total - a.total);
+
+  const efectivo = porMetodo.EFECTIVO ? redondear2(porMetodo.EFECTIVO.total) : 0;
+  const total = redondear2(metodos.reduce((s, m) => s + m.total, 0));
+
+  return { metodos, efectivo, total, conteo: { ventas, pagosSeparado, cambios } };
+}
+
+
+function leerCierres(ss) {
+
+  return leerHoja(ss, NOMBRE_HOJA_CAJA, 12)
+    .filter(f => String(f[0]).trim())
+    .map(f => ({
+      fecha: f[0] instanceof Date ? fechaISO(f[0]) : String(f[0]).replace(/^'/, '').trim(),
+      fondo: Number(f[1]) || 0,
+      entradas: Number(f[2]) || 0,
+      salidas: Number(f[3]) || 0,
+      esperado: Number(f[4]) || 0,
+      contado: Number(f[5]) || 0,
+      diferencia: Number(f[6]) || 0,
+      otros: Number(f[7]) || 0,
+      total: Number(f[8]) || 0,
+      nota: String(f[9]).trim(),
+      usuario: String(f[10]).trim(),
+      registrado: fechaHora(f[11])
+    }));
+}
+
+
+function verCaja(p) {
+
+  const sesion = validarSesion(p.token);
+
+  if (!sesion) {
+    return respuestaSesionVencida();
+  }
+
+  if (!esAdministradora(sesion)) {
+    return responderJSON({ ok: false, mensaje: 'Solo la administradora puede ver la caja.' });
+  }
+
+  const hoy = fechaISO(new Date());
+  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(p.fecha || '')) ? String(p.fecha) : hoy;
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const cierres = leerCierres(ss).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const cierre = cierres.find(c => c.fecha === fecha) || null;
+  const anterior = cierres.find(c => c.fecha < fecha);
+
+  return responderJSON({
+    ok: true,
+    fecha: fecha,
+    hoy: hoy,
+    movimientos: movimientosDelDia(ss, fecha),
+    cierre: cierre,
+    fondoSugerido: anterior ? anterior.contado : 0,
+    historial: cierres.slice(0, 31)
+  });
+}
+
+
+function cerrarCaja(datos) {
+
+  const sesion = validarSesion(datos.token);
+
+  if (!sesion) {
+    return respuestaSesionVencida();
+  }
+
+  if (!esAdministradora(sesion)) {
+    return responderJSON({ ok: false, mensaje: 'Solo la administradora puede cerrar la caja.' });
+  }
+
+  const fecha = String(datos.fecha || '').trim();
+  const numero = v => (v === '' || v === null || v === undefined) ? NaN : Number(v);
+  const fondo = numero(datos.fondo);
+  const salidas = numero(datos.salidas);
+  const contado = numero(datos.contado);
+  const nota = String(datos.nota || '').trim().slice(0, 300);
+
+  const lock = LockService.getScriptLock();
+
+  try {
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || fecha > fechaISO(new Date())) {
+      throw new Error('Fecha no válida.');
+    }
+
+    [[fondo, 'El fondo inicial'], [salidas, 'Las salidas'], [contado, 'El efectivo contado']].forEach(([v, nombre]) => {
+      if (!(v >= 0) || v > 1000000) throw new Error(nombre + ' debe ser un monto de 0 o más.');
+    });
+
+    lock.waitLock(15000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const hoja = hojaCaja(ss);
+    const mov = movimientosDelDia(ss, fecha);
+
+    const esperado = redondear2(fondo + mov.efectivo - salidas);
+    const diferencia = redondear2(contado - esperado);
+
+    const fila = [
+      "'" + fecha, redondear2(fondo), mov.efectivo, redondear2(salidas), esperado, redondear2(contado),
+      diferencia, redondear2(mov.total - mov.efectivo), mov.total, textoSeguro(nota), textoSeguro(sesion.nombre), new Date()
+    ];
+
+    // Un cierre por día: si ya existe, se reemplaza
+    const existentes = hoja.getLastRow() < 2 ? [] : hoja.getRange(2, 1, hoja.getLastRow() - 1, 1).getValues();
+    const indice = existentes.findIndex(f =>
+      (f[0] instanceof Date ? fechaISO(f[0]) : String(f[0]).replace(/^'/, '').trim()) === fecha);
+
+    if (indice === -1) {
+      hoja.appendRow(fila);
+    } else {
+      hoja.getRange(indice + 2, 1, 1, fila.length).setValues([fila]);
+    }
+
+    SpreadsheetApp.flush();
+
+    return responderJSON({ ok: true, cierre: { fecha, esperado, diferencia, contado: redondear2(contado) } });
+
+  } catch (error) {
+
+    return responderJSON({ ok: false, mensaje: error.message });
+
+  } finally {
+
+    lock.releaseLock();
+  }
 }
 
 
