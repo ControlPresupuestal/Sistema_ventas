@@ -60,14 +60,15 @@ formLogin.addEventListener("submit", async (event) => {
 
   try {
 
-    const url =
-      `${API_URL}?accion=login` +
-      `&usuario=${encodeURIComponent(usuario)}` +
-      `&clave=${encodeURIComponent(clave)}`;
-
-
     const respuesta =
-      await fetch(url);
+      await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          accion: "login",
+          usuario: usuario,
+          clave: clave
+        })
+      });
 
 
     const datos =
@@ -105,12 +106,6 @@ setTimeout(() => {
     "dashboard.html";
 
 }, 500);
-
-
-    console.log(
-      "Usuario conectado:",
-      datos.usuario
-    );
 
 
   } catch (error) {
