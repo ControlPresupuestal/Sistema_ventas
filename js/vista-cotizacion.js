@@ -133,6 +133,10 @@ async function cargarCotizacion(numero) {
       datos.cotizacion
     );
 
+    if (datos.configuracion) {
+      aplicarConfiguracion(datos.configuracion, datos.cotizacion);
+    }
+
 
     numeroCargado =
       datos.cotizacion.numero;
@@ -231,6 +235,106 @@ function mostrarCotizacion(cotizacion) {
     cotizacion.productos || []
   );
 
+}
+
+
+
+// ======================================================
+// DATOS DE LA TIENDA (Configuración)
+// ======================================================
+
+function aplicarConfiguracion(config, cotizacion) {
+
+  const poner = (id, texto) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = texto;
+  };
+
+  const nombre = config.tiendaNombre || "ZAREINA";
+
+  poner("docTiendaNombre", nombre);
+  poner("docTiendaEslogan", config.tiendaEslogan || "");
+  poner("docPieNombre", nombre);
+  poner("docMensajeTitulo", config.mensajeTitulo || "");
+  poner("docMensajeTexto", config.mensajeTexto || "");
+
+  document.title = `${nombre} | Cotización`;
+
+  // Contacto: RUC, dirección, teléfono, Instagram, correo
+  const contacto = [
+    config.tiendaRuc ? `RUC ${config.tiendaRuc}` : "",
+    config.tiendaDireccion,
+    config.tiendaTelefono ? `Tel. ${config.tiendaTelefono}` : "",
+    config.tiendaInstagram,
+    config.tiendaEmail
+  ].filter(Boolean);
+
+  poner("docTiendaContacto", contacto.join("  ·  "));
+
+  // Validez
+  poner("docPieValidez", textoValidez(cotizacion.fecha, Number(config.validezDias) || 0));
+
+  // Formas de pago
+  const activos = config.metodosActivos || [];
+
+  const nombres = {
+    EFECTIVO: "Efectivo",
+    YAPE: "Yape",
+    PLIN: "Plin",
+    TRANSFERENCIA: "Transferencia",
+    TARJETA: "Tarjeta"
+  };
+
+  const datosMetodo = {
+    YAPE: config.yapeNumero,
+    PLIN: config.plinNumero,
+    TRANSFERENCIA: config.cuentaBancaria
+  };
+
+  const pagos = activos.map(m => datosMetodo[m]
+    ? `<li><strong>${escaparHTML(nombres[m] || m)}:</strong> ${escaparHTML(datosMetodo[m])}</li>`
+    : `<li>${escaparHTML(nombres[m] || m)}</li>`);
+
+  // Solo se muestra si hay algún dato útil para pagar
+  const hayDatosPago = activos.some(m => datosMetodo[m]);
+
+  document.getElementById("docPagosLista").innerHTML = pagos.join("");
+  document.getElementById("docPagos").style.display = hayDatosPago ? "" : "none";
+
+  // Condiciones (una por línea)
+  const condiciones = String(config.condiciones || "")
+    .split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(Boolean);
+
+  document.getElementById("docCondicionesLista").innerHTML =
+    condiciones.map(c => `<li>${escaparHTML(c)}</li>`).join("");
+  document.getElementById("docCondiciones").style.display = condiciones.length ? "" : "none";
+
+  const extras = document.getElementById("docExtras");
+  extras.style.display = hayDatosPago || condiciones.length ? "" : "none";
+  extras.classList.toggle("una-columna", !(hayDatosPago && condiciones.length));
+
+  // Métodos que se pueden elegir al registrar la venta
+  document.querySelectorAll("#metodosPago button[data-metodo]").forEach(boton => {
+    boton.style.display = activos.includes(boton.dataset.metodo) ? "" : "none";
+  });
+}
+
+
+function textoValidez(fecha, dias) {
+
+  const partes = String(fecha || "").split("/").map(Number);
+
+  if (!dias || partes.length !== 3 || partes.some(isNaN)) {
+    return "Cotización válida según disponibilidad de stock.";
+  }
+
+  const limite = new Date(partes[2], partes[1] - 1, partes[0] + dias);
+  const dd = String(limite.getDate()).padStart(2, "0");
+  const mm = String(limite.getMonth() + 1).padStart(2, "0");
+
+  return `Válida hasta el ${dd}/${mm}/${limite.getFullYear()}, sujeta a disponibilidad de stock.`;
 }
 
 
