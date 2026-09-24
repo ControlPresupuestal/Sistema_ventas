@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZAREINA | Clientes</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/historial.css">
+  <link rel="stylesheet" href="css/ventas.css">
+  <link rel="stylesheet" href="css/productos.css">
+  <link rel="stylesheet" href="css/clientes.css">
+</head>
+
+<body class="dashboard-page">
+
+  <header class="topbar">
+    <div class="topbar-marca">
+      <span class="estrella">✦</span>
+      <div>
+        <h1>ZAREINA</h1>
+        <small>Moda que eleva tu esencia</small>
+      </div>
+    </div>
+
+    <div class="usuario-header">
+      <div class="usuario-info">
+        <strong id="nombreUsuario"></strong>
+        <span id="rolUsuario"></span>
+      </div>
+
+      <div id="avatarUsuario" class="avatar"></div>
+
+      <a href="dashboard.html" class="btn-volver">
+        ← Inicio
+      </a>
+    </div>
+  </header>
+
+
+  <main class="cotizacion-contenedor">
+
+    <section class="cotizacion-titulo">
+      <div>
+        <span class="etiqueta-zareina">CLIENTES</span>
+        <h2>Clientes</h2>
+        <p>Datos de contacto e historial de compras.</p>
+      </div>
+
+      <button id="btnNuevoCliente" class="btn-cotizacion-principal historial-nueva">
+        + Nuevo cliente
+      </button>
+    </section>
+
+
+    <!-- FILTROS -->
+
+    <section class="cotizacion-card historial-filtros clientes-filtros">
+
+      <div class="campo-producto historial-buscar">
+        <label for="buscar">Buscar</label>
+        <input id="buscar" type="search" placeholder="Nombre, teléfono, documento o correo" autocomplete="off">
+      </div>
+
+      <div class="campo-producto">
+        <label for="orden">Ordenar por</label>
+        <select id="orden">
+          <option value="nombre">Nombre (A-Z)</option>
+          <option value="total">Más compras (S/)</option>
+          <option value="reciente">Compra más reciente</option>
+        </select>
+      </div>
+
+      <button id="btnLimpiarFiltros" class="btn-cotizacion-secundario historial-limpiar">
+        Limpiar
+      </button>
+
+    </section>
+
+
+    <!-- RESUMEN -->
+
+    <section class="historial-resumen">
+      <div>
+        <span>Clientes</span>
+        <strong id="resumenClientes">0</strong>
+      </div>
+      <div>
+        <span>Con compras</span>
+        <strong id="resumenCompradores">0</strong>
+      </div>
+      <div>
+        <span>Total comprado</span>
+        <strong>S/ <span id="resumenTotal">0.00</span></strong>
+      </div>
+    </section>
+
+
+    <!-- LISTA -->
+
+    <section class="cotizacion-card">
+
+      <div class="tabla-responsive">
+        <table class="tabla-cotizacion historial-tabla clientes-tabla">
+
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Teléfono</th>
+              <th class="historial-derecha">Cotizaciones</th>
+              <th class="historial-derecha">Compras</th>
+              <th class="historial-derecha">Total</th>
+              <th>Última compra</th>
+              <th></th>
+            </tr>
+          </thead>
+
+          <tbody id="listaClientes">
+            <tr>
+              <td colspan="7" class="cotizacion-vacia">Cargando clientes...</td>
+            </tr>
+          </tbody>
+
+        </table>
+      </div>
+
+    </section>
+
+
+    <!-- VENTANA: CLIENTE -->
+
+    <div id="modalCliente" class="modal-fondo" style="display:none;">
+
+      <div class="modal-caja" role="dialog" aria-modal="true" aria-labelledby="tituloModalCliente">
+
+        <h3 id="tituloModalCliente">Nuevo cliente</h3>
+
+        <p id="resumenCliente" class="modal-texto"></p>
+
+        <div class="producto-form">
+
+          <div class="campo-producto producto-form-ancho">
+            <label for="fNombre">Nombre</label>
+            <input id="fNombre" type="text" maxlength="80" autocomplete="off">
+          </div>
+
+          <div class="campo-producto">
+            <label for="fTelefono">Teléfono / WhatsApp</label>
+            <input id="fTelefono" type="tel" maxlength="20" inputmode="tel" autocomplete="off">
+          </div>
+
+          <div class="campo-producto">
+            <label for="fDocumento">DNI / RUC</label>
+            <input id="fDocumento" type="text" maxlength="15" inputmode="numeric" autocomplete="off">
+          </div>
+
+          <div class="campo-producto producto-form-ancho">
+            <label for="fEmail">Correo</label>
+            <input id="fEmail" type="email" maxlength="80" autocomplete="off">
+          </div>
+
+          <div class="campo-producto producto-form-ancho">
+            <label for="fNotas">Notas</label>
+            <textarea id="fNotas" class="modal-motivo" rows="2" maxlength="300" placeholder="Ej. Talla M, prefiere colores claros"></textarea>
+          </div>
+
+        </div>
+
+        <div id="accionesCliente" class="cliente-accesos" style="display:none;">
+          <a id="lnkWhatsapp" target="_blank" rel="noopener">WhatsApp</a>
+          <a id="lnkCotizaciones">Ver cotizaciones</a>
+          <a id="lnkVentas">Ver compras</a>
+        </div>
+
+        <div id="modalClienteError" class="modal-error"></div>
+
+        <div class="acciones-cotizacion">
+          <button id="btnCancelarCliente" class="btn-cotizacion-secundario">Cancelar</button>
+          <button id="btnGuardarCliente" class="btn-cotizacion-principal">Guardar</button>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <script src="js/clientes.js"></script>
+
+</body>
+</html>
