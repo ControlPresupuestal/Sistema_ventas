@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZAREINA | Usuarios</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/historial.css">
+  <link rel="stylesheet" href="css/ventas.css">
+  <link rel="stylesheet" href="css/productos.css">
+  <link rel="stylesheet" href="css/clientes.css">
+</head>
+
+<body class="dashboard-page">
+
+  <header class="topbar">
+    <div class="topbar-marca">
+      <span class="estrella">✦</span>
+      <div>
+        <h1>ZAREINA</h1>
+        <small>Moda que eleva tu esencia</small>
+      </div>
+    </div>
+
+    <div class="usuario-header">
+      <div class="usuario-info">
+        <strong id="nombreUsuario"></strong>
+        <span id="rolUsuario"></span>
+      </div>
+
+      <div id="avatarUsuario" class="avatar"></div>
+
+      <a href="dashboard.html" class="btn-volver">
+        ← Inicio
+      </a>
+    </div>
+  </header>
+
+
+  <main class="cotizacion-contenedor">
+
+    <section class="cotizacion-titulo">
+      <div>
+        <span class="etiqueta-zareina">ADMINISTRACIÓN</span>
+        <h2>Usuarios</h2>
+        <p>Accesos al sistema de la administradora y las vendedoras.</p>
+      </div>
+
+      <button id="btnNuevoUsuario" class="btn-cotizacion-principal historial-nueva">
+        + Nuevo usuario
+      </button>
+    </section>
+
+
+    <section class="cotizacion-card">
+
+      <div class="tabla-responsive">
+        <table class="tabla-cotizacion historial-tabla">
+
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Usuario</th>
+              <th>Rol</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+
+          <tbody id="listaUsuarios">
+            <tr>
+              <td colspan="5" class="cotizacion-vacia">Cargando usuarios...</td>
+            </tr>
+          </tbody>
+
+        </table>
+      </div>
+
+    </section>
+
+
+    <!-- VENTANA: USUARIO -->
+
+    <div id="modalUsuario" class="modal-fondo" style="display:none;">
+
+      <div class="modal-caja" role="dialog" aria-modal="true" aria-labelledby="tituloModalUsuario">
+
+        <h3 id="tituloModalUsuario">Nuevo usuario</h3>
+
+        <p id="textoUsuario" class="modal-texto"></p>
+
+        <div class="producto-form">
+
+          <div class="campo-producto producto-form-ancho">
+            <label for="fNombre">Nombre</label>
+            <input id="fNombre" type="text" maxlength="60" autocomplete="off">
+          </div>
+
+          <div class="campo-producto">
+            <label for="fUsuario">Usuario (para ingresar)</label>
+            <input id="fUsuario" type="text" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false">
+          </div>
+
+          <div class="campo-producto">
+            <label for="fClave" id="etiquetaClave">Contraseña</label>
+            <input id="fClave" type="password" maxlength="60" autocomplete="new-password">
+          </div>
+
+          <div class="campo-producto">
+            <label for="fRol">Rol</label>
+            <select id="fRol"></select>
+          </div>
+
+          <div class="campo-producto">
+            <label for="fEstado">Estado</label>
+            <select id="fEstado">
+              <option value="ACTIVO">Activo</option>
+              <option value="INACTIVO">Inactivo (sin acceso)</option>
+            </select>
+          </div>
+
+        </div>
+
+        <p class="modal-nota">
+          La contraseña se guarda cifrada: nadie puede leerla en el Sheet.
+          Si una vendedora la olvida, asígnale una nueva aquí.
+        </p>
+
+        <div id="modalUsuarioError" class="modal-error"></div>
+
+        <div class="acciones-cotizacion">
+          <button id="btnCancelarUsuario" class="btn-cotizacion-secundario">Cancelar</button>
+          <button id="btnGuardarUsuario" class="btn-cotizacion-principal">Guardar</button>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <script src="js/usuarios.js"></script>
+
+</body>
+</html>
