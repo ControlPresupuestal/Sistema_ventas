@@ -8,6 +8,7 @@
   <title>ZAREINA | Inicio</title>
 
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/inicio.css">
 </head>
 
 <body class="dashboard-page">
@@ -65,6 +66,42 @@
       <div class="decoracion-dashboard">
         ✦
       </div>
+
+    </section>
+
+
+    <!-- RESUMEN DEL DÍA -->
+
+    <section id="resumenDia" class="resumen-dia" aria-live="polite">
+
+      <div class="resumen-dia-cabecera">
+        <h3 id="resumenTitulo">Hoy</h3>
+        <span id="resumenFecha"></span>
+      </div>
+
+      <div class="resumen-dia-tarjetas">
+
+        <a href="ventas.html" class="resumen-tarjeta principal">
+          <span id="resumenEtiquetaTotal">Vendido hoy</span>
+          <strong id="resumenTotal">—</strong>
+          <small id="resumenVentas">Cargando...</small>
+        </a>
+
+        <a href="cotizaciones.html" class="resumen-tarjeta">
+          <span>Cotizaciones pendientes</span>
+          <strong id="resumenPendientes">—</strong>
+          <small>de hoy, sin vender</small>
+        </a>
+
+        <a href="productos.html?stock=bajo" class="resumen-tarjeta" id="tarjetaStock">
+          <span>Stock bajo</span>
+          <strong id="resumenBajos">—</strong>
+          <small id="resumenAgotados"></small>
+        </a>
+
+      </div>
+
+      <div id="resumenDetalle" class="resumen-dia-detalle"></div>
 
     </section>
 
