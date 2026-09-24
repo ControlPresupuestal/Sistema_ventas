@@ -5,6 +5,7 @@ const NOMBRE_HOJA_DETALLE = 'DETALLE_COTIZACION';
 const NOMBRE_HOJA_VENTAS = 'VENTAS';
 const NOMBRE_HOJA_ANULACIONES = 'ANULACIONES';
 const NOMBRE_HOJA_CLIENTES = 'CLIENTES';
+const NOMBRE_HOJA_CONFIGURACION = 'CONFIGURACION';
 
 const METODOS_PAGO = ['EFECTIVO', 'YAPE', 'PLIN', 'TRANSFERENCIA', 'TARJETA'];
 
@@ -55,6 +56,10 @@ function doGet(e) {
 
   if (accion === 'usuarios') {
     return listarUsuarios(p);
+  }
+
+  if (accion === 'configuracion') {
+    return verConfiguracion(p);
   }
 
   if (accion === 'login' || accion === 'guardarcotizacion') {
@@ -113,6 +118,10 @@ function doPost(e) {
 
     if (accion === 'guardarusuario') {
       return guardarUsuario(datos);
+    }
+
+    if (accion === 'guardarconfiguracion') {
+      return guardarConfiguracion(datos);
     }
 
     if (accion === 'logout') {
@@ -664,7 +673,8 @@ function obtenerCotizacion(p) {
       estado: String(cabecera[6]),
       usuario: String(cabecera[7] || ''),
       productos: productos
-    }
+    },
+    configuracion: leerConfiguracion()
   });
 }
 
@@ -750,6 +760,10 @@ function registrarVenta(datos) {
 
   if (METODOS_PAGO.indexOf(metodoPago) === -1) {
     return responderJSON({ ok: false, mensaje: 'Selecciona un método de pago válido.' });
+  }
+
+  if (leerConfiguracion().metodosActivos.indexOf(metodoPago) === -1) {
+    return responderJSON({ ok: false, mensaje: 'Ese método de pago está desactivado en Configuración.' });
   }
 
   const lock = LockService.getScriptLock();
@@ -1201,7 +1215,7 @@ function listarInventario(p) {
   }
 
   if (hoja.getLastRow() < 2) {
-    return responderJSON({ ok: true, productos: [] });
+    return responderJSON({ ok: true, productos: [], stockBajo: leerConfiguracion().stockBajo });
   }
 
   const productos = hoja
@@ -1218,7 +1232,7 @@ function listarInventario(p) {
       estado: String(fila[6]).trim().toUpperCase() === 'INACTIVO' ? 'INACTIVO' : 'ACTIVO'
     }));
 
-  return responderJSON({ ok: true, productos: productos });
+  return responderJSON({ ok: true, productos: productos, stockBajo: leerConfiguracion().stockBajo });
 }
 
 
@@ -1910,6 +1924,215 @@ function guardarUsuario(datos) {
     SpreadsheetApp.flush();
 
     return responderJSON({ ok: true });
+
+  } catch (error) {
+
+    return responderJSON({ ok: false, mensaje: error.message });
+
+  } finally {
+
+    lock.releaseLock();
+  }
+}
+
+
+// ======================================================
+// CONFIGURACIÓN
+// ======================================================
+
+const CONFIG_DEFECTO = {
+  tiendaNombre: 'ZAREINA',
+  tiendaEslogan: 'Moda que eleva tu esencia',
+  tiendaRuc: '',
+  tiendaDireccion: '',
+  tiendaTelefono: '',
+  tiendaInstagram: '',
+  tiendaEmail: '',
+  mensajeTitulo: 'Gracias por elegir ZAREINA',
+  mensajeTexto: 'Esperamos que encuentres algo que eleve tu esencia.',
+  validezDias: 0,
+  condiciones: '',
+  metodosActivos: METODOS_PAGO.slice(),
+  yapeNumero: '',
+  plinNumero: '',
+  cuentaBancaria: '',
+  stockBajo: 2
+};
+
+// Máximo de caracteres por campo de texto
+const CONFIG_LARGOS = {
+  tiendaNombre: 40, tiendaEslogan: 80, tiendaRuc: 11, tiendaDireccion: 120,
+  tiendaTelefono: 20, tiendaInstagram: 40, tiendaEmail: 80,
+  mensajeTitulo: 80, mensajeTexto: 200, condiciones: 600,
+  yapeNumero: 20, plinNumero: 20, cuentaBancaria: 200
+};
+
+const CONFIG_NOMBRES = {
+  tiendaNombre: 'Nombre de la tienda', tiendaEslogan: 'Eslogan', tiendaRuc: 'RUC',
+  tiendaDireccion: 'Dirección', tiendaTelefono: 'Teléfono', tiendaInstagram: 'Instagram',
+  tiendaEmail: 'Correo', mensajeTitulo: 'Título del mensaje', mensajeTexto: 'Mensaje',
+  condiciones: 'Condiciones', yapeNumero: 'Número de Yape', plinNumero: 'Número de Plin',
+  cuentaBancaria: 'Cuenta bancaria'
+};
+
+
+function obtenerHojaConfiguracion(ss) {
+
+  let hoja = ss.getSheetByName(NOMBRE_HOJA_CONFIGURACION);
+
+  if (!hoja) {
+    hoja = ss.insertSheet(NOMBRE_HOJA_CONFIGURACION);
+    hoja.appendRow(['CLAVE', 'VALOR']);
+    hoja.setFrozenRows(1);
+  }
+
+  return hoja;
+}
+
+
+function leerConfiguracion() {
+
+  const cache = CacheService.getScriptCache();
+  const guardada = cache.get('CONFIGURACION');
+
+  if (guardada) {
+    return JSON.parse(guardada);
+  }
+
+  const config = JSON.parse(JSON.stringify(CONFIG_DEFECTO));
+
+  try {
+
+    leerHoja(SpreadsheetApp.getActiveSpreadsheet(), NOMBRE_HOJA_CONFIGURACION, 2).forEach(fila => {
+
+      const clave = String(fila[0]).trim();
+      const valor = String(fila[1] == null ? '' : fila[1]);
+
+      if (!Object.prototype.hasOwnProperty.call(CONFIG_DEFECTO, clave)) return;
+
+      if (clave === 'metodosActivos') {
+        config.metodosActivos = valor.split(',')
+          .map(m => m.trim().toUpperCase())
+          .filter(m => METODOS_PAGO.indexOf(m) !== -1);
+      } else if (clave === 'validezDias' || clave === 'stockBajo') {
+        const n = Number(valor);
+        if (valor !== '' && Number.isInteger(n) && n >= 0) config[clave] = n;
+      } else {
+        config[clave] = valor.replace(/^'/, '');
+      }
+    });
+
+  } catch (error) {
+    console.error(error);
+  }
+
+  if (!config.metodosActivos.length) {
+    config.metodosActivos = METODOS_PAGO.slice();
+  }
+
+  cache.put('CONFIGURACION', JSON.stringify(config), 600);
+
+  return config;
+}
+
+
+function verConfiguracion(p) {
+
+  if (!validarSesion(p.token)) {
+    return respuestaSesionVencida();
+  }
+
+  return responderJSON({ ok: true, configuracion: leerConfiguracion(), metodos: METODOS_PAGO });
+}
+
+
+function guardarConfiguracion(datos) {
+
+  const sesion = validarSesion(datos.token);
+
+  if (!sesion) {
+    return respuestaSesionVencida();
+  }
+
+  if (!esAdministradora(sesion)) {
+    return responderJSON({ ok: false, mensaje: 'Solo la administradora puede cambiar la configuración.' });
+  }
+
+  const entrada = datos.configuracion || {};
+  const config = {};
+
+  try {
+
+    Object.keys(CONFIG_LARGOS).forEach(clave => {
+      const texto = String(entrada[clave] == null ? '' : entrada[clave]).trim();
+      if (texto.length > CONFIG_LARGOS[clave]) {
+        throw new Error(CONFIG_NOMBRES[clave] + ': máximo ' + CONFIG_LARGOS[clave] + ' caracteres.');
+      }
+      config[clave] = texto;
+    });
+
+    if (!config.tiendaNombre) {
+      throw new Error('Escribe el nombre de la tienda.');
+    }
+
+    if (config.tiendaRuc && !/^\d{11}$/.test(config.tiendaRuc)) {
+      throw new Error('El RUC debe tener 11 números.');
+    }
+
+    if (config.tiendaEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.tiendaEmail)) {
+      throw new Error('El correo de la tienda no es válido.');
+    }
+
+    const validez = Number(entrada.validezDias);
+    if (entrada.validezDias === '' || !Number.isInteger(validez) || validez < 0 || validez > 365) {
+      throw new Error('Los días de validez deben ser un número entre 0 y 365.');
+    }
+    config.validezDias = validez;
+
+    const stockBajo = Number(entrada.stockBajo);
+    if (entrada.stockBajo === '' || !Number.isInteger(stockBajo) || stockBajo < 0 || stockBajo > 1000) {
+      throw new Error('La alerta de stock bajo debe ser un número entre 0 y 1000.');
+    }
+    config.stockBajo = stockBajo;
+
+    const metodos = (Array.isArray(entrada.metodosActivos) ? entrada.metodosActivos : [])
+      .map(m => String(m).trim().toUpperCase())
+      .filter((m, i, lista) => METODOS_PAGO.indexOf(m) !== -1 && lista.indexOf(m) === i);
+
+    if (!metodos.length) {
+      throw new Error('Deja activo al menos un método de pago.');
+    }
+    config.metodosActivos = metodos;
+
+  } catch (error) {
+    return responderJSON({ ok: false, mensaje: error.message });
+  }
+
+  const lock = LockService.getScriptLock();
+
+  try {
+
+    lock.waitLock(15000);
+
+    const hoja = obtenerHojaConfiguracion(SpreadsheetApp.getActiveSpreadsheet());
+
+    const filas = Object.keys(CONFIG_DEFECTO).map(clave => [
+      clave,
+      clave === 'metodosActivos' ? config.metodosActivos.join(',') : textoSeguro(config[clave])
+    ]);
+
+    if (hoja.getLastRow() > 1) {
+      hoja.getRange(2, 1, hoja.getLastRow() - 1, 2).clearContent();
+    }
+
+    // Como texto, para que el Sheet no convierta el RUC o los teléfonos en números
+    hoja.getRange(2, 1, filas.length, 2).setNumberFormat('@').setValues(filas);
+
+    SpreadsheetApp.flush();
+
+    CacheService.getScriptCache().remove('CONFIGURACION');
+
+    return responderJSON({ ok: true, configuracion: leerConfiguracion() });
 
   } catch (error) {
 
