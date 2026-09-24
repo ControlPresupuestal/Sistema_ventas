@@ -41,6 +41,13 @@ const filtroStock = document.getElementById("filtroStock");
 const filtroEstado = document.getElementById("filtroEstado");
 const lista = document.getElementById("listaProductos");
 
+// Filtro enviado desde otra pantalla (ej. ?stock=bajo desde el inicio)
+const stockInicial = new URLSearchParams(window.location.search).get("stock");
+
+if (stockInicial && filtroStock.querySelector(`option[value="${CSS.escape(stockInicial)}"]`)) {
+  filtroStock.value = stockInicial;
+}
+
 let productos = [];
 
 
