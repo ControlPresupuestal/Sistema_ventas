@@ -149,6 +149,8 @@ async function cargarCotizacion(numero) {
 
     avisoVentaRapida(datos.cotizacion.numero);
 
+    prepararOperaciones(datos);
+
     btnPDF.disabled = false;
     btnImagen.disabled = false;
 
@@ -747,7 +749,7 @@ function prepararVenta(cotizacion) {
   document.getElementById("modalTotal").textContent = Number(cotizacion.total).toFixed(2);
 
   btnVender.style.display =
-    estado === "VENDIDO" || estado === "ANULADO" ? "none" : "inline-flex";
+    estado === "VENDIDO" || estado === "ANULADO" || estado === "SEPARADO" ? "none" : "inline-flex";
 }
 
 
@@ -888,6 +890,8 @@ btnConfirmarVenta.addEventListener("click", async () => {
 
     mostrarAvisoVenta(venta);
 
+    btnSeparar.style.display = "none";
+
     document.getElementById("avisoVenta").scrollIntoView({ behavior: "smooth", block: "center" });
 
   } catch (error) {
@@ -1027,6 +1031,8 @@ btnConfirmarAnular.addEventListener("click", async () => {
     cerrarModalAnular();
 
     document.getElementById("estadoCotizacion").textContent = "ANULADO";
+    btnSeparar.style.display = "none";
+    btnCambio.style.display = "none";
     btnVender.style.display = "none";
     btnAnular.style.display = "none";
     estadoCargado = "ANULADO";
@@ -1253,6 +1259,390 @@ btnCompartirImagen.addEventListener("click", async () => {
 
     console.error(error);
     document.getElementById("errorWhatsapp").textContent = "No se pudo compartir la imagen.";
+  }
+});
+
+
+
+// ======================================================
+// SEPARAR Y CAMBIOS
+// ======================================================
+
+const btnSeparar = document.getElementById("btnSeparar");
+const btnCambio = document.getElementById("btnCambio");
+
+let datosOperacion = null;
+
+const solesOp = n => "S/ " + Number(n || 0).toFixed(2);
+
+
+function prepararOperaciones(datos) {
+
+  datosOperacion = datos;
+
+  const c = datos.cotizacion;
+  const estado = String(c.estado || "").trim().toUpperCase();
+  const activos = (datos.configuracion && datos.configuracion.metodosActivos) || null;
+
+  if (activos) {
+    document.querySelectorAll("#separarMetodos button[data-metodo], #cambioMetodos button[data-metodo]").forEach(b => {
+      b.style.display = activos.includes(b.dataset.metodo) ? "" : "none";
+    });
+  }
+
+  btnSeparar.style.display = estado === "COTIZADO" ? "inline-flex" : "none";
+
+  // Separada: se paga desde Separados
+  if (estado === "SEPARADO") {
+
+    btnVender.style.display = "none";
+    btnAnular.style.display = "none";
+
+    const s = datos.separado;
+    const aviso = document.getElementById("avisoVenta");
+
+    aviso.classList.add("aviso-separado");
+    aviso.innerHTML = s
+      ? `<strong>Separada · ${escaparHTML(s.numero)}</strong>
+         <span>Pagado ${solesOp(s.pagado)} de ${solesOp(s.total)} · saldo ${solesOp(s.saldo)}</span>
+         <a href="separados.html">Ir a Separados →</a>`
+      : `<strong>Separada</strong><a href="separados.html">Ir a Separados →</a>`;
+    aviso.style.display = "flex";
+  }
+
+  // Vendida: cambios
+  const articulos = datos.articulosCliente || [];
+  const cambios = datos.cambios || [];
+
+  btnCambio.style.display = estado === "VENDIDO" && articulos.length ? "inline-flex" : "none";
+
+  if (cambios.length) {
+
+    btnAnular.style.display = "none";
+
+    const lista = document.getElementById("listaCambios");
+
+    lista.innerHTML = `<strong>Cambios registrados:</strong> ` + cambios.map(x =>
+      `${escaparHTML(x.numero)} (${escaparHTML(x.fecha)}): devolvió ${solesOp(x.devuelto)}, se llevó ${solesOp(x.nuevo)}` +
+      (x.diferencia > 0 ? `, pagó ${solesOp(x.diferencia)} con ${escaparHTML(x.metodo)}` : "") +
+      ` · ${escaparHTML(x.motivo)}`).join("<br>");
+
+    lista.style.display = "block";
+  }
+}
+
+
+function elegirMetodo(contenedor, boton) {
+  document.querySelectorAll(`#${contenedor} button`).forEach(b => b.classList.toggle("activo", b === boton));
+  return boton.dataset.metodo;
+}
+
+
+async function enviarOperacion(cuerpo) {
+
+  const respuesta = await fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify(Object.assign({ token: usuario.token }, cuerpo))
+  });
+
+  const datos = await respuesta.json();
+
+  if (!datos.ok) {
+    if (datos.sesionExpirada) {
+      sessionStorage.removeItem("zareinaUsuario");
+      alert(datos.mensaje);
+      window.location.replace("index.html");
+    }
+    throw new Error(datos.mensaje);
+  }
+
+  return datos;
+}
+
+
+// ---------- Separar ----------
+
+const modalSeparar = document.getElementById("modalSeparar");
+const montoAdelanto = document.getElementById("montoAdelanto");
+const btnConfirmarSeparar = document.getElementById("btnConfirmarSeparar");
+const errorSeparar = document.getElementById("errorSeparar");
+
+let metodoSeparar = "";
+let enviandoOperacion = false;
+
+
+function revisarSeparar() {
+  btnConfirmarSeparar.disabled = !metodoSeparar || !(Number(montoAdelanto.value) > 0) || enviandoOperacion;
+}
+
+
+btnSeparar.addEventListener("click", () => {
+
+  if (!datosOperacion) return;
+
+  metodoSeparar = "";
+  montoAdelanto.value = "";
+  document.getElementById("notaSeparado").value = "";
+  document.getElementById("separarTotal").textContent = Number(datosOperacion.cotizacion.total).toFixed(2);
+  errorSeparar.textContent = "";
+  document.querySelectorAll("#separarMetodos button").forEach(b => b.classList.remove("activo"));
+  revisarSeparar();
+
+  modalSeparar.style.display = "flex";
+  montoAdelanto.focus();
+});
+
+montoAdelanto.addEventListener("input", revisarSeparar);
+
+document.getElementById("separarMetodos").addEventListener("click", (event) => {
+  const boton = event.target.closest("button[data-metodo]");
+  if (!boton || enviandoOperacion) return;
+  metodoSeparar = elegirMetodo("separarMetodos", boton);
+  revisarSeparar();
+});
+
+function cerrarSeparar() {
+  if (enviandoOperacion) return;
+  modalSeparar.style.display = "none";
+}
+
+document.getElementById("btnCancelarSeparar").addEventListener("click", cerrarSeparar);
+modalSeparar.addEventListener("click", (event) => { if (event.target === modalSeparar) cerrarSeparar(); });
+
+
+btnConfirmarSeparar.addEventListener("click", async () => {
+
+  const adelanto = Math.round(Number(montoAdelanto.value) * 100) / 100;
+  const total = Number(datosOperacion.cotizacion.total);
+
+  if (adelanto >= total) {
+    errorSeparar.textContent = 'El adelanto cubre todo el total: usa "Registrar venta".';
+    return;
+  }
+
+  enviandoOperacion = true;
+  btnConfirmarSeparar.disabled = true;
+  btnConfirmarSeparar.textContent = "Separando...";
+  errorSeparar.textContent = "";
+
+  try {
+
+    await enviarOperacion({
+      accion: "crearSeparado",
+      numero: numeroCargado,
+      adelanto: adelanto,
+      metodoPago: metodoSeparar,
+      nota: document.getElementById("notaSeparado").value.trim()
+    });
+
+    window.location.reload();
+
+  } catch (error) {
+
+    console.error(error);
+    enviandoOperacion = false;
+    errorSeparar.textContent = error.message || "No se pudo separar.";
+    btnConfirmarSeparar.textContent = "Separar";
+    revisarSeparar();
+  }
+});
+
+
+// ---------- Cambio ----------
+
+const modalCambio = document.getElementById("modalCambio");
+const cambioProducto = document.getElementById("cambioProducto");
+const btnConfirmarCambio = document.getElementById("btnConfirmarCambio");
+const errorCambio = document.getElementById("errorCambio");
+const motivoCambio = document.getElementById("motivoCambio");
+
+let productosCambio = null;
+let llevaCambio = [];
+let metodoCambio = "";
+
+
+async function cargarProductosCambio() {
+
+  if (productosCambio) return;
+
+  try {
+
+    const respuesta = await fetch(`${API_URL}?accion=productos`);
+    const datos = await respuesta.json();
+
+    productosCambio = (datos.productos || []).slice().sort((a, b) =>
+      a.producto.localeCompare(b.producto, "es") || String(a.talla).localeCompare(String(b.talla)) || a.color.localeCompare(b.color, "es"));
+
+    cambioProducto.innerHTML = `<option value="">Elegir prenda nueva</option>` + productosCambio.map(p =>
+      `<option value="${escaparHTML(p.id)}">${escaparHTML(p.producto)} · ${escaparHTML(p.talla)} · ${escaparHTML(p.color)} — ${solesOp(p.precio)} (stock ${p.stock})</option>`).join("");
+
+  } catch (error) {
+
+    console.error(error);
+    cambioProducto.innerHTML = `<option value="">No se pudieron cargar los productos</option>`;
+  }
+}
+
+
+function renderCambio() {
+
+  const devuelve = [...document.querySelectorAll("#cambioDevuelve input[data-id]")]
+    .map(i => ({ id: i.dataset.id, cantidad: Number(i.value) || 0, precio: Number(i.dataset.precio) }))
+    .filter(x => x.cantidad > 0);
+
+  document.getElementById("cambioLleva").innerHTML = llevaCambio.map((x, i) => `
+    <div class="cambio-item">
+      <span>${escaparHTML(x.producto)} · ${escaparHTML(x.talla)} · ${escaparHTML(x.color)}<small>${x.cantidad} × ${solesOp(x.precio)}</small></span>
+      <button class="btn-quitar" type="button" data-quitar="${i}" title="Quitar">×</button>
+    </div>`).join("");
+
+  const totalDevuelve = devuelve.reduce((s, x) => s + x.cantidad * x.precio, 0);
+  const totalLleva = llevaCambio.reduce((s, x) => s + x.cantidad * x.precio, 0);
+  const diferencia = Math.round((totalLleva - totalDevuelve) * 100) / 100;
+
+  const resumen = document.getElementById("cambioResumen");
+
+  resumen.innerHTML = `
+    Devuelve: <strong>${solesOp(totalDevuelve)}</strong> · Se lleva: <strong>${solesOp(totalLleva)}</strong><br>
+    ${!devuelve.length || !llevaCambio.length ? "Elige lo que devuelve y lo que se lleva." :
+      diferencia > 0 ? `La clienta paga la diferencia: <strong>${solesOp(diferencia)}</strong>` :
+      diferencia < 0 ? `<span class="aviso">La prenda nueva cuesta ${solesOp(-diferencia)} menos. Esa diferencia no se devuelve.</span>` :
+      "Mismo precio: no hay nada que cobrar."}`;
+
+  document.getElementById("cambioPago").style.display = diferencia > 0 ? "block" : "none";
+
+  btnConfirmarCambio.disabled =
+    enviandoOperacion || !devuelve.length || !llevaCambio.length ||
+    motivoCambio.value.trim().length < 3 || (diferencia > 0 && !metodoCambio);
+
+  return { devuelve, diferencia };
+}
+
+
+btnCambio.addEventListener("click", () => {
+
+  if (!datosOperacion) return;
+
+  llevaCambio = [];
+  metodoCambio = "";
+  motivoCambio.value = "";
+  errorCambio.textContent = "";
+  document.querySelectorAll("#cambioMetodos button").forEach(b => b.classList.remove("activo"));
+
+  document.getElementById("cambioDevuelve").innerHTML = (datosOperacion.articulosCliente || []).map(a => `
+    <div class="cambio-item">
+      <span>${escaparHTML(a.producto)} · ${escaparHTML(a.talla)} · ${escaparHTML(a.color)}<small>Tiene ${a.cantidad} · ${solesOp(a.precio)} c/u</small></span>
+      <input type="number" min="0" max="${a.cantidad}" step="1" value="0" data-id="${escaparHTML(a.id)}" data-precio="${a.precio}" aria-label="Cantidad que devuelve">
+    </div>`).join("");
+
+  renderCambio();
+  modalCambio.style.display = "flex";
+  cargarProductosCambio();
+});
+
+document.getElementById("cambioDevuelve").addEventListener("input", (event) => {
+  const i = event.target;
+  const max = Number(i.max);
+  if (Number(i.value) > max) i.value = max;
+  if (Number(i.value) < 0) i.value = 0;
+  renderCambio();
+});
+
+document.getElementById("btnAgregarCambio").addEventListener("click", () => {
+
+  const p = (productosCambio || []).find(x => x.id === cambioProducto.value);
+  const cantidad = Number(document.getElementById("cambioCantidad").value);
+
+  if (!p) return;
+
+  if (!Number.isInteger(cantidad) || cantidad <= 0) {
+    errorCambio.textContent = "La cantidad debe ser un número entero mayor que 0.";
+    return;
+  }
+
+  const actual = llevaCambio.find(x => x.id === p.id);
+  const total = (actual ? actual.cantidad : 0) + cantidad;
+
+  if (total > p.stock) {
+    errorCambio.textContent = `Solo hay ${p.stock} en stock de esa prenda.`;
+    return;
+  }
+
+  errorCambio.textContent = "";
+
+  if (actual) actual.cantidad = total;
+  else llevaCambio.push({ id: p.id, producto: p.producto, talla: p.talla, color: p.color, precio: Number(p.precio), cantidad });
+
+  cambioProducto.value = "";
+  document.getElementById("cambioCantidad").value = 1;
+  renderCambio();
+});
+
+document.getElementById("cambioLleva").addEventListener("click", (event) => {
+  const boton = event.target.closest("[data-quitar]");
+  if (!boton) return;
+  llevaCambio.splice(Number(boton.dataset.quitar), 1);
+  renderCambio();
+});
+
+document.getElementById("cambioMetodos").addEventListener("click", (event) => {
+  const boton = event.target.closest("button[data-metodo]");
+  if (!boton || enviandoOperacion) return;
+  metodoCambio = elegirMetodo("cambioMetodos", boton);
+  renderCambio();
+});
+
+motivoCambio.addEventListener("input", renderCambio);
+
+function cerrarCambio() {
+  if (enviandoOperacion) return;
+  modalCambio.style.display = "none";
+}
+
+document.getElementById("btnCancelarCambio").addEventListener("click", cerrarCambio);
+modalCambio.addEventListener("click", (event) => { if (event.target === modalCambio) cerrarCambio(); });
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (modalSeparar.style.display !== "none") cerrarSeparar();
+  if (modalCambio.style.display !== "none") cerrarCambio();
+});
+
+
+btnConfirmarCambio.addEventListener("click", async () => {
+
+  const { devuelve, diferencia } = renderCambio();
+
+  if (btnConfirmarCambio.disabled) return;
+
+  enviandoOperacion = true;
+  btnConfirmarCambio.disabled = true;
+  btnConfirmarCambio.textContent = "Registrando...";
+  errorCambio.textContent = "";
+
+  try {
+
+    const datos = await enviarOperacion({
+      accion: "registrarCambio",
+      numero: numeroCargado,
+      devuelve: devuelve.map(x => ({ id: x.id, cantidad: x.cantidad })),
+      lleva: llevaCambio.map(x => ({ id: x.id, cantidad: x.cantidad })),
+      metodoPago: diferencia > 0 ? metodoCambio : "",
+      motivo: motivoCambio.value.trim()
+    });
+
+    alert(`✓ Cambio ${datos.cambio.numero} registrado. El stock ya se actualizó.` +
+      (datos.cambio.cobrado > 0 ? ` Cobrado: ${solesOp(datos.cambio.cobrado)}.` : ""));
+
+    window.location.reload();
+
+  } catch (error) {
+
+    console.error(error);
+    enviandoOperacion = false;
+    errorCambio.textContent = error.message || "No se pudo registrar el cambio.";
+    btnConfirmarCambio.textContent = "Registrar cambio";
+    renderCambio();
   }
 });
 
