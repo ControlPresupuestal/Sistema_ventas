@@ -185,6 +185,7 @@ function claseEstado(estado) {
   const e = normalizar(estado);
   if (e.includes("vend")) return "estado-vendido";
   if (e.includes("anul")) return "estado-anulado";
+  if (e.includes("separ")) return "estado-separado";
   return "estado-cotizado";
 }
 
