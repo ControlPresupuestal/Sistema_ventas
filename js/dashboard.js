@@ -118,7 +118,8 @@ const NOMBRES_METODO = {
   YAPE: "Yape",
   PLIN: "Plin",
   TRANSFERENCIA: "Transferencia",
-  TARJETA: "Tarjeta"
+  TARJETA: "Tarjeta",
+  SEPARADO: "Separados completados"
 };
 
 
