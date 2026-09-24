@@ -39,6 +39,13 @@ const estadoSelect = document.getElementById("estado");
 const lista = document.getElementById("listaCotizaciones");
 const btnVerMas = document.getElementById("btnVerMas");
 
+// Búsqueda enviada desde otra pantalla (ej. ?buscar=María)
+const busquedaInicial = new URLSearchParams(window.location.search).get("buscar");
+
+if (busquedaInicial) {
+  buscarInput.value = busquedaInicial;
+}
+
 let cotizaciones = [];
 let filtradas = [];
 let mostrando = POR_PAGINA;
