@@ -2,6 +2,9 @@ const NOMBRE_HOJA_USUARIOS = 'USUARIOS';
 const NOMBRE_HOJA_PRODUCTOS = 'PRODUCTOS';
 const NOMBRE_HOJA_COTIZACIONES = 'COTIZACIONES';
 const NOMBRE_HOJA_DETALLE = 'DETALLE_COTIZACION';
+const NOMBRE_HOJA_VENTAS = 'VENTAS';
+
+const METODOS_PAGO = ['EFECTIVO', 'YAPE', 'PLIN', 'TRANSFERENCIA', 'TARJETA'];
 
 const DURACION_SESION = 21600;      // 6 horas
 const MAX_INTENTOS_LOGIN = 5;
@@ -30,6 +33,10 @@ function doGet(e) {
 
   if (accion === 'cotizaciones') {
     return listarCotizaciones(p);
+  }
+
+  if (accion === 'ventas') {
+    return listarVentas(p);
   }
 
   if (accion === 'login' || accion === 'guardarcotizacion') {
@@ -68,6 +75,10 @@ function doPost(e) {
 
     if (accion === 'guardarcotizacion') {
       return guardarCotizacion(datos);
+    }
+
+    if (accion === 'registrarventa') {
+      return registrarVenta(datos);
     }
 
     if (accion === 'logout') {
@@ -660,6 +671,256 @@ function listarCotizaciones(p) {
     .reverse(); // más recientes primero
 
   return responderJSON({ ok: true, cotizaciones: cotizaciones });
+}
+
+
+// ======================================================
+// VENTAS
+// ======================================================
+
+// Convierte una cotización en venta: valida y descuenta
+// el stock, marca la cotización como VENDIDO y registra
+// la venta en la hoja VENTAS.
+
+function registrarVenta(datos) {
+
+  const sesion = validarSesion(datos.token);
+
+  if (!sesion) {
+    return respuestaSesionVencida();
+  }
+
+  const numero = String(datos.numero || '').trim().toUpperCase();
+  const metodoPago = String(datos.metodoPago || '').trim().toUpperCase();
+
+  if (!numero) {
+    return responderJSON({ ok: false, mensaje: 'Falta el número de cotización.' });
+  }
+
+  if (METODOS_PAGO.indexOf(metodoPago) === -1) {
+    return responderJSON({ ok: false, mensaje: 'Selecciona un método de pago válido.' });
+  }
+
+  const lock = LockService.getScriptLock();
+
+  try {
+
+    lock.waitLock(15000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const hojaProductos = ss.getSheetByName(NOMBRE_HOJA_PRODUCTOS);
+    const hojaCotizaciones = ss.getSheetByName(NOMBRE_HOJA_COTIZACIONES);
+    const hojaDetalle = ss.getSheetByName(NOMBRE_HOJA_DETALLE);
+    const hojaVentas = obtenerHojaVentas(ss);
+
+    if (!hojaProductos || !hojaCotizaciones || !hojaDetalle) {
+      throw new Error('Falta alguna hoja del sistema.');
+    }
+
+    // 1. Cotización
+    const ultimaCot = hojaCotizaciones.getLastRow();
+
+    if (ultimaCot < 2) {
+      throw new Error('No existen cotizaciones registradas.');
+    }
+
+    const cotizaciones = hojaCotizaciones
+      .getRange(2, 1, ultimaCot - 1, 8)
+      .getValues();
+
+    const indiceCot = cotizaciones.findIndex(
+      fila => String(fila[0]).trim().toUpperCase() === numero
+    );
+
+    if (indiceCot === -1) {
+      throw new Error('No se encontró la cotización ' + numero);
+    }
+
+    const cabecera = cotizaciones[indiceCot];
+    const estadoActual = String(cabecera[6] || '').trim().toUpperCase();
+
+    if (estadoActual === 'VENDIDO') {
+      throw new Error('Esta cotización ya fue vendida.');
+    }
+
+    if (estadoActual === 'ANULADO') {
+      throw new Error('Esta cotización está anulada.');
+    }
+
+    // 2. Detalle
+    const ultimaDet = hojaDetalle.getLastRow();
+
+    const detalle = ultimaDet < 2 ? [] : hojaDetalle
+      .getRange(2, 1, ultimaDet - 1, 8)
+      .getValues()
+      .filter(fila => String(fila[0]).trim().toUpperCase() === numero);
+
+    if (detalle.length === 0) {
+      throw new Error('La cotización no tiene productos.');
+    }
+
+    const cantidadesPorId = {};
+
+    detalle.forEach(fila => {
+      const id = String(fila[1]).trim();
+      cantidadesPorId[id] = (cantidadesPorId[id] || 0) + Number(fila[5] || 0);
+    });
+
+    // 3. Validar stock de TODO antes de descontar nada
+    const ultimaProd = hojaProductos.getLastRow();
+
+    const productosBD = hojaProductos
+      .getRange(2, 1, ultimaProd - 1, 7)
+      .getValues();
+
+    const descuentos = Object.keys(cantidadesPorId).map(id => {
+
+      const indice = productosBD.findIndex(fila => String(fila[0]).trim() === id);
+
+      if (indice === -1) {
+        throw new Error('El producto con código ' + id + ' ya no existe.');
+      }
+
+      const producto = productosBD[indice];
+      const stockActual = Number(producto[5]) || 0;
+      const cantidad = cantidadesPorId[id];
+
+      if (cantidad > stockActual) {
+        throw new Error(
+          'Stock insuficiente para "' + producto[1] + ' ' + producto[3] + ' ' + producto[2] +
+          '". Disponible: ' + stockActual + ', requerido: ' + cantidad
+        );
+      }
+
+      return { fila: indice + 2, nuevoStock: stockActual - cantidad };
+    });
+
+    // 4. Descontar stock
+    descuentos.forEach(d => {
+      hojaProductos.getRange(d.fila, 6).setValue(d.nuevoStock);
+    });
+
+    // 5. Marcar cotización como vendida
+    hojaCotizaciones.getRange(indiceCot + 2, 7).setValue('VENDIDO');
+
+    // 6. Registrar la venta
+    const numeroVenta = generarNumeroVenta(hojaVentas);
+    const fecha = new Date();
+    const total = Number(cabecera[5]) || 0;
+
+    hojaVentas.appendRow([
+      numeroVenta,
+      fecha,
+      numero,
+      textoSeguro(cabecera[2]),
+      total,
+      metodoPago,
+      textoSeguro(sesion.nombre)
+    ]);
+
+    SpreadsheetApp.flush();
+
+    return responderJSON({
+      ok: true,
+      venta: {
+        numero: numeroVenta,
+        cotizacion: numero,
+        cliente: String(cabecera[2]),
+        total: total,
+        metodoPago: metodoPago,
+        fecha: Utilities.formatDate(fecha, Session.getScriptTimeZone(), 'dd/MM/yyyy')
+      }
+    });
+
+  } catch (error) {
+
+    return responderJSON({ ok: false, mensaje: error.message });
+
+  } finally {
+
+    lock.releaseLock();
+  }
+}
+
+
+function obtenerHojaVentas(ss) {
+
+  let hoja = ss.getSheetByName(NOMBRE_HOJA_VENTAS);
+
+  if (!hoja) {
+    hoja = ss.insertSheet(NOMBRE_HOJA_VENTAS);
+    hoja.appendRow(['NUMERO', 'FECHA', 'COTIZACION', 'CLIENTE', 'TOTAL', 'METODO_PAGO', 'USUARIO']);
+    hoja.setFrozenRows(1);
+  }
+
+  return hoja;
+}
+
+
+function generarNumeroVenta(hoja) {
+
+  const ultimaFila = hoja.getLastRow();
+
+  if (ultimaFila < 2) {
+    return 'VEN-000001';
+  }
+
+  let mayor = 0;
+
+  hoja
+    .getRange(2, 1, ultimaFila - 1, 1)
+    .getDisplayValues()
+    .flat()
+    .forEach(valor => {
+      const m = String(valor).match(/^VEN-(\d+)$/i);
+      if (m) {
+        mayor = Math.max(mayor, Number(m[1]));
+      }
+    });
+
+  return 'VEN-' + String(mayor + 1).padStart(6, '0');
+}
+
+
+function listarVentas(p) {
+
+  if (!validarSesion(p.token)) {
+    return respuestaSesionVencida();
+  }
+
+  const hoja = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName(NOMBRE_HOJA_VENTAS);
+
+  if (!hoja || hoja.getLastRow() < 2) {
+    return responderJSON({ ok: true, ventas: [] });
+  }
+
+  const zona = Session.getScriptTimeZone();
+
+  const ventas = hoja
+    .getRange(2, 1, hoja.getLastRow() - 1, 7)
+    .getValues()
+    .filter(fila => String(fila[0]).trim())
+    .map(fila => {
+
+      const fecha = fila[1] instanceof Date ? fila[1] : new Date(fila[1]);
+      const valida = !isNaN(fecha.getTime());
+
+      return {
+        numero: String(fila[0]).trim(),
+        fecha: valida ? Utilities.formatDate(fecha, zona, 'dd/MM/yyyy') : String(fila[1]),
+        fechaISO: valida ? Utilities.formatDate(fecha, zona, 'yyyy-MM-dd') : '',
+        cotizacion: String(fila[2]).trim(),
+        cliente: String(fila[3]),
+        total: Number(fila[4]) || 0,
+        metodoPago: String(fila[5] || '').trim(),
+        usuario: String(fila[6] || '').trim()
+      };
+    })
+    .reverse();
+
+  return responderJSON({ ok: true, ventas: ventas });
 }
 
 
