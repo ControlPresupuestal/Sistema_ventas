@@ -79,6 +79,12 @@
       </button>
 
       <button
+        id="btnWhatsapp"
+        class="btn-cotizacion-secundario btn-whatsapp">
+        WhatsApp
+      </button>
+
+      <button
         id="btnVender"
         class="btn-cotizacion-principal btn-vender"
         style="display:none;">
@@ -377,6 +383,69 @@
 
           <button id="btnConfirmarVenta" class="btn-cotizacion-principal" disabled>
             Confirmar venta
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- VENTANA: WHATSAPP -->
+
+    <div
+      id="modalWhatsapp"
+      class="modal-fondo"
+      style="display:none;">
+
+      <div class="modal-caja" role="dialog" aria-modal="true" aria-labelledby="tituloModalWhatsapp">
+
+        <h3 id="tituloModalWhatsapp">Enviar por WhatsApp</h3>
+
+        <label class="modal-label" for="telefonoWhatsapp">Número del cliente</label>
+
+        <input
+          id="telefonoWhatsapp"
+          class="whatsapp-telefono"
+          type="tel"
+          inputmode="tel"
+          autocomplete="off"
+          placeholder="Ej. 986 123 456 (vacío = elegir contacto)">
+
+        <label class="modal-label">Mensaje</label>
+
+        <p id="previaWhatsapp" class="modal-texto-previa"></p>
+
+        <div class="whatsapp-opciones">
+
+          <button id="btnEnviarMensaje" class="whatsapp-opcion" type="button">
+            <span>💬</span>
+            <span>
+              <strong>Enviar mensaje</strong>
+              <small>Abre el chat con el detalle y el total</small>
+            </span>
+          </button>
+
+          <button id="btnCompartirImagen" class="whatsapp-opcion" type="button" style="display:none;">
+            <span>🖼️</span>
+            <span>
+              <strong>Compartir imagen + mensaje</strong>
+              <small>Elige WhatsApp y el chat del cliente</small>
+            </span>
+          </button>
+
+        </div>
+
+        <p id="ayudaImagenPC" class="modal-nota-wa">
+          Para mandar también la imagen desde la computadora: descárgala con el botón
+          <strong>Imagen</strong> y arrástrala al chat de WhatsApp.
+        </p>
+
+        <div id="errorWhatsapp" class="modal-error"></div>
+
+        <div class="acciones-cotizacion">
+          <button id="btnCerrarWhatsapp" class="btn-cotizacion-secundario" type="button">
+            Cerrar
           </button>
         </div>
 
