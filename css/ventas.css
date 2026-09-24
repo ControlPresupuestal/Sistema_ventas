@@ -1,0 +1,188 @@
+/* ==================================
+   VENTAS
+================================== */
+
+.vista-acciones .btn-vender {
+  flex: initial;
+  width: auto;
+  padding: 0 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.aviso-venta {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  background: #e3efe3;
+  border: 1px solid #c7dec9;
+  color: #2f5a35;
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+}
+
+.aviso-venta span {
+  color: #4b6d4f;
+  font-size: 14px;
+}
+
+.aviso-venta a {
+  margin-left: auto;
+  color: #2f5a35;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+
+/* Ventana */
+
+.modal-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(46, 27, 19, .45);
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal-caja {
+  width: 100%;
+  max-width: 460px;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 20px 60px rgba(46, 27, 19, .25);
+}
+
+.modal-caja h3 {
+  margin: 0 0 10px;
+  font-family: Georgia, serif;
+  font-size: 24px;
+  color: #4c2d20;
+}
+
+.modal-texto {
+  margin: 0 0 18px;
+  color: #7e746e;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.modal-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  background: #faf6f1;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+
+.modal-total > span {
+  color: #94765f;
+  font-size: 13px;
+}
+
+.modal-total strong {
+  font-family: Georgia, serif;
+  font-size: 24px;
+  color: #4c2d20;
+}
+
+.modal-label {
+  display: block;
+  font-size: 12px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.metodos-pago {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.metodos-pago button {
+  height: 46px;
+  border: 1px solid #d9d0c8;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #4c2d20;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+
+.metodos-pago button:hover {
+  border-color: #c79b43;
+}
+
+.metodos-pago button.activo {
+  border: 2px solid #6f442f;
+  background: #f5e9dc;
+  font-weight: bold;
+}
+
+.modal-error {
+  min-height: 20px;
+  margin: 12px 0 0;
+  color: #a63d3d;
+  font-size: 14px;
+}
+
+.modal-caja .btn-cotizacion-principal:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+
+/* Chips de método de pago en la lista */
+
+.chip-pago {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: .5px;
+  background: #eef0f6;
+  color: #4a5575;
+}
+
+
+@media (max-width: 650px) {
+
+  .vista-acciones .btn-vender {
+    width: 100%;
+    order: -1;
+  }
+
+  .aviso-venta a {
+    margin-left: 0;
+  }
+
+  .modal-caja {
+    padding: 22px 18px;
+  }
+}
+
+.historial-sub {
+  display: block;
+  color: #9a897e;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+@media (max-width: 650px) {
+  .historial-tabla td[data-label="Venta"] {
+    flex-wrap: wrap;
+  }
+
+  .historial-sub {
+    display: inline;
+    margin-left: 6px;
+  }
+}
