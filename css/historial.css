@@ -1,0 +1,188 @@
+/* ==================================
+   HISTORIAL DE COTIZACIONES
+================================== */
+
+.historial-nueva {
+  flex: initial;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  text-decoration: none;
+}
+
+.historial-filtros {
+  display: grid;
+  grid-template-columns: 2.4fr 1fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.historial-limpiar {
+  flex: initial;
+  height: 46px;
+  padding: 0 18px;
+}
+
+.historial-resumen {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.historial-resumen > div {
+  background: #f5e9dc;
+  border: 1px solid #ead8c3;
+  border-radius: 14px;
+  padding: 14px 22px;
+  min-width: 170px;
+}
+
+.historial-resumen > div > span {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #94765f;
+  margin-bottom: 4px;
+}
+
+.historial-resumen strong {
+  font-family: Georgia, serif;
+  font-size: 22px;
+  color: #4c2d20;
+}
+
+.historial-derecha {
+  text-align: right !important;
+}
+
+.historial-fila {
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.historial-fila:hover {
+  background: #fbf6f0;
+}
+
+.historial-abrir {
+  color: #6f442f;
+  font-weight: bold;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.estado-chip {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: .5px;
+}
+
+.estado-cotizado {
+  background: #f5e9dc;
+  color: #8b704b;
+}
+
+.estado-vendido {
+  background: #e3efe3;
+  color: #3d6b43;
+}
+
+.estado-anulado {
+  background: #f7e8e5;
+  color: #a64d43;
+}
+
+.historial-paginacion {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.historial-paginacion .btn-cotizacion-secundario {
+  flex: initial;
+  padding: 0 24px;
+  align-items: center;
+  justify-content: center;
+}
+
+
+@media (max-width: 900px) {
+
+  .historial-filtros {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .historial-buscar {
+    grid-column: 1 / -1;
+  }
+}
+
+
+/* En el celular cada cotización se ve como tarjeta */
+@media (max-width: 650px) {
+
+  .cotizacion-titulo {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .historial-nueva {
+    width: 100%;
+    height: 45px;
+  }
+
+  .historial-resumen > div {
+    flex: 1;
+    min-width: 0;
+    padding: 12px 14px;
+  }
+
+  .historial-tabla thead {
+    display: none;
+  }
+
+  .historial-tabla,
+  .historial-tabla tbody,
+  .historial-tabla tr,
+  .historial-tabla td {
+    display: block;
+    width: 100%;
+  }
+
+  .historial-tabla tr.historial-fila {
+    border: 1px solid #eadfd4;
+    border-radius: 14px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+  }
+
+  .historial-tabla td {
+    border: none !important;
+    padding: 5px 0 !important;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    text-align: right;
+  }
+
+  .historial-tabla td[data-label]::before {
+    content: attr(data-label);
+    color: #9a897e;
+    font-size: 12px;
+    text-align: left;
+  }
+
+  .historial-tabla td.cotizacion-vacia {
+    display: block;
+    text-align: center;
+  }
+
+  .historial-tabla td.historial-derecha:not([data-label]) {
+    justify-content: flex-end;
+  }
+}
