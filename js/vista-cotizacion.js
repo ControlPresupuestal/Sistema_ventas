@@ -134,6 +134,13 @@ async function cargarCotizacion(numero) {
     );
 
 
+    numeroCargado =
+      datos.cotizacion.numero;
+
+    btnPDF.disabled = false;
+    btnImagen.disabled = false;
+
+
   } catch (error) {
 
     console.error(error);
@@ -372,40 +379,238 @@ function mostrarError(mensaje) {
 // BOTONES PDF / IMAGEN
 // ======================================================
 
-// Por ahora solo comprobamos
-// que la vista funcione.
-// En el siguiente paso los activamos.
+const btnPDF =
+  document.getElementById("btnPDF");
 
-document
-  .getElementById(
-    "btnPDF"
+const btnImagen =
+  document.getElementById("btnImagen");
+
+let numeroCargado = "";
+
+
+// Se activan solo cuando la cotización ya cargó
+btnPDF.disabled = true;
+btnImagen.disabled = true;
+
+
+async function capturarDocumento() {
+
+  if (typeof html2canvas === "undefined") {
+    throw new Error(
+      "No se pudo cargar la herramienta de captura. Revisa tu conexión y recarga la página."
+    );
+  }
+
+  const documento =
+    document.getElementById(
+      "documentoCotizacion"
+    );
+
+  // Siempre se captura con diseño de escritorio,
+  // aunque se use desde el celular.
+  return html2canvas(documento, {
+    scale: 2,
+    logging: false,
+    backgroundColor: "#ffffff",
+    useCORS: true,
+    windowWidth: 1100,
+    onclone: (doc) => {
+      const copia =
+        doc.getElementById("documentoCotizacion");
+      copia.style.width = "1000px";
+      copia.style.boxShadow = "none";
+      const encabezado = copia.querySelector("thead tr");
+      if (encabezado) encabezado.style.background = "#6f442f";
+    }
+  });
+
+}
+
+
+function nombreArchivo(extension) {
+  return `Cotizacion-${numeroCargado || "ZAREINA"}.${extension}`;
+}
+
+
+function descargarBlob(blob, nombre) {
+
+  const url =
+    URL.createObjectURL(blob);
+
+  const enlace =
+    document.createElement("a");
+
+  enlace.href = url;
+  enlace.download = nombre;
+
+  document.body.appendChild(enlace);
+  enlace.click();
+  enlace.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+}
+
+
+async function ejecutarConBoton(boton, textoTrabajando, accion) {
+
+  const textoOriginal =
+    boton.textContent;
+
+  btnPDF.disabled = true;
+  btnImagen.disabled = true;
+
+  boton.textContent =
+    textoTrabajando;
+
+  try {
+
+    await accion();
+
+  } catch (error) {
+
+    if (error && error.name === "AbortError") {
+      return; // El usuario cerró el menú de compartir
+    }
+
+    console.error(error);
+
+    alert(
+      "No se pudo generar el archivo:\n" +
+      (error.message || error)
+    );
+
+  } finally {
+
+    boton.textContent =
+      textoOriginal;
+
+    btnPDF.disabled = false;
+    btnImagen.disabled = false;
+
+  }
+
+}
+
+
+// ---------- IMAGEN (PNG) ----------
+// En el celular abre el menú de compartir (WhatsApp, etc.).
+// En la computadora descarga el archivo.
+
+btnImagen.addEventListener(
+  "click",
+  () => ejecutarConBoton(
+    btnImagen,
+    "Generando...",
+    async () => {
+
+      const canvas =
+        await capturarDocumento();
+
+      const blob =
+        await new Promise(resolve =>
+          canvas.toBlob(resolve, "image/png")
+        );
+
+      const nombre =
+        nombreArchivo("png");
+
+      const archivo =
+        new File([blob], nombre, { type: "image/png" });
+
+      if (
+        navigator.canShare &&
+        navigator.canShare({ files: [archivo] })
+      ) {
+
+        await navigator.share({
+          files: [archivo],
+          title: nombre
+        });
+
+      } else {
+
+        descargarBlob(blob, nombre);
+
+      }
+
+    }
   )
-  .addEventListener(
-    "click",
-    () => {
+);
 
-      alert(
-        "El PDF será el siguiente paso."
+
+// ---------- PDF (A4) ----------
+
+btnPDF.addEventListener(
+  "click",
+  () => ejecutarConBoton(
+    btnPDF,
+    "Generando...",
+    async () => {
+
+      if (!window.jspdf) {
+        throw new Error(
+          "No se pudo cargar la herramienta de PDF. Revisa tu conexión y recarga la página."
+        );
+      }
+
+      const canvas =
+        await capturarDocumento();
+
+      const { jsPDF } =
+        window.jspdf;
+
+      const pdf =
+        new jsPDF({
+          orientation: "portrait",
+          unit: "mm",
+          format: "a4"
+        });
+
+      const margen = 10;
+
+      const anchoPagina =
+        pdf.internal.pageSize.getWidth() - margen * 2;
+
+      const altoPagina =
+        pdf.internal.pageSize.getHeight() - margen * 2;
+
+      const altoImagen =
+        canvas.height * anchoPagina / canvas.width;
+
+      const imagen =
+        canvas.toDataURL("image/jpeg", 0.95);
+
+      // Si el documento es más alto que una hoja,
+      // se reparte en varias páginas.
+      let posicion = 0;
+
+      pdf.addImage(imagen, "JPEG", margen, margen, anchoPagina, altoImagen);
+
+      while (altoImagen - posicion > altoPagina) {
+
+        posicion += altoPagina;
+
+        pdf.addPage();
+
+        pdf.addImage(
+          imagen,
+          "JPEG",
+          margen,
+          margen - posicion,
+          anchoPagina,
+          altoImagen
+        );
+
+      }
+
+      pdf.save(
+        nombreArchivo("pdf")
       );
 
     }
-  );
-
-
-document
-  .getElementById(
-    "btnImagen"
   )
-  .addEventListener(
-    "click",
-    () => {
-
-      alert(
-        "La imagen será el siguiente paso."
-      );
-
-    }
-  );
+);
 
 
 
