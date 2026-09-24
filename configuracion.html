@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZAREINA | Configuración</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/historial.css">
+  <link rel="stylesheet" href="css/ventas.css">
+  <link rel="stylesheet" href="css/productos.css">
+  <link rel="stylesheet" href="css/configuracion.css">
+</head>
+
+<body class="dashboard-page">
+
+  <header class="topbar">
+    <div class="topbar-marca">
+      <span class="estrella">✦</span>
+      <div>
+        <h1>ZAREINA</h1>
+        <small>Moda que eleva tu esencia</small>
+      </div>
+    </div>
+
+    <div class="usuario-header">
+      <div class="usuario-info">
+        <strong id="nombreUsuario"></strong>
+        <span id="rolUsuario"></span>
+      </div>
+
+      <div id="avatarUsuario" class="avatar"></div>
+
+      <a href="dashboard.html" class="btn-volver">
+        ← Inicio
+      </a>
+    </div>
+  </header>
+
+
+  <main class="cotizacion-contenedor config-contenedor">
+
+    <section class="cotizacion-titulo">
+      <div>
+        <span class="etiqueta-zareina">ADMINISTRACIÓN</span>
+        <h2>Configuración</h2>
+        <p>Datos que aparecen en las cotizaciones y opciones del sistema.</p>
+      </div>
+    </section>
+
+
+    <div id="estadoConfig" class="config-estado">Cargando configuración...</div>
+
+
+    <form id="formConfig" style="display:none;" novalidate>
+
+      <!-- DATOS DE LA TIENDA -->
+
+      <section class="cotizacion-card">
+
+        <div class="config-titulo">
+          <h3>Datos de la tienda</h3>
+          <p>Salen en el encabezado de la cotización, el PDF y la imagen.</p>
+        </div>
+
+        <div class="producto-form">
+
+          <div class="campo-producto">
+            <label for="tiendaNombre">Nombre de la tienda</label>
+            <input id="tiendaNombre" type="text" maxlength="40" autocomplete="off">
+          </div>
+
+          <div class="campo-producto">
+            <label for="tiendaEslogan">Eslogan</label>
+            <input id="tiendaEslogan" type="text" maxlength="80" autocomplete="off">
+          </div>
+
+          <div class="campo-producto">
+            <label for="tiendaRuc">RUC <span class="config-opcional">opcional</span></label>
+            <input id="tiendaRuc" type="text" maxlength="11" inputmode="numeric" autocomplete="off" placeholder="11 números">
+          </div>
+
+          <div class="campo-producto">
+            <label for="tiendaTelefono">Teléfono / WhatsApp <span class="config-opcional">opcional</span></label>
+            <input id="tiendaTelefono" type="tel" maxlength="20" inputmode="tel" autocomplete="off">
+          </div>
+
+          <div class="campo-producto producto-form-ancho">
+            <label for="tiendaDireccion">Dirección <span class="config-opcional">opcional</span></label>
+            <input id="tiendaDireccion" type="text" maxlength="120" autocomplete="off">
+          </div>
+
+          <div class="campo-producto">
+            <label for="tiendaInstagram">Instagram <span class="config-opcional">opcional</span></label>
+            <input id="tiendaInstagram" type="text" maxlength="40" autocomplete="off" placeholder="@zareina">
+          </div>
+
+          <div class="campo-producto">
+            <label for="tiendaEmail">Correo <span class="config-opcional">opcional</span></label>
+            <input id="tiendaEmail" type="email" maxlength="80" autocomplete="off">
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- MENSAJE Y CONDICIONES -->
+
+      <section class="cotizacion-card">
+
+        <div class="config-titulo">
+          <h3>Mensaje y condiciones</h3>
+          <p>El texto de la parte inferior de la cotización.</p>
+        </div>
+
+        <div class="producto-form">
+
+          <div class="campo-producto producto-form-ancho">
+            <label for="mensajeTitulo">Título del mensaje</label>
+            <input id="mensajeTitulo" type="text" maxlength="80" autocomplete="off">
+          </div>
+
+          <div class="campo-producto producto-form-ancho">
+            <label for="mensajeTexto">Mensaje</label>
+            <textarea id="mensajeTexto" class="modal-motivo" rows="2" maxlength="200"></textarea>
+          </div>
+
+          <div class="campo-producto">
+            <label for="validezDias">Días de validez</label>
+            <input id="validezDias" type="number" min="0" max="365" step="1" inputmode="numeric">
+            <small class="config-ayuda">0 = sin fecha límite (dice "válida según disponibilidad de stock").</small>
+          </div>
+
+          <div class="campo-producto producto-form-ancho">
+            <label for="condiciones">Condiciones <span class="config-opcional">opcional · una por línea</span></label>
+            <textarea id="condiciones" class="modal-motivo" rows="3" maxlength="600" placeholder="Ej. Cambios dentro de los 7 días con boleta&#10;No se aceptan devoluciones de prendas en oferta"></textarea>
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- MÉTODOS DE PAGO -->
+
+      <section class="cotizacion-card">
+
+        <div class="config-titulo">
+          <h3>Métodos de pago</h3>
+          <p>Los desactivados no aparecen al registrar una venta. Los datos de Yape, Plin o la cuenta salen en la cotización para que la clienta pueda pagar.</p>
+        </div>
+
+        <div id="listaMetodos" class="config-metodos">
+
+          <div class="config-metodo">
+            <label class="config-switch">
+              <input type="checkbox" value="EFECTIVO">
+              <span>💵 Efectivo</span>
+            </label>
+          </div>
+
+          <div class="config-metodo">
+            <label class="config-switch">
+              <input type="checkbox" value="YAPE">
+              <span>📱 Yape</span>
+            </label>
+            <input id="yapeNumero" type="tel" maxlength="20" inputmode="tel" autocomplete="off" placeholder="Número de Yape (opcional)" aria-label="Número de Yape">
+          </div>
+
+          <div class="config-metodo">
+            <label class="config-switch">
+              <input type="checkbox" value="PLIN">
+              <span>📱 Plin</span>
+            </label>
+            <input id="plinNumero" type="tel" maxlength="20" inputmode="tel" autocomplete="off" placeholder="Número de Plin (opcional)" aria-label="Número de Plin">
+          </div>
+
+          <div class="config-metodo">
+            <label class="config-switch">
+              <input type="checkbox" value="TRANSFERENCIA">
+              <span>🏦 Transferencia</span>
+            </label>
+            <input id="cuentaBancaria" type="text" maxlength="200" autocomplete="off" placeholder="Banco, cuenta y CCI (opcional)" aria-label="Cuenta bancaria">
+          </div>
+
+          <div class="config-metodo">
+            <label class="config-switch">
+              <input type="checkbox" value="TARJETA">
+              <span>💳 Tarjeta</span>
+            </label>
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- INVENTARIO -->
+
+      <section class="cotizacion-card">
+
+        <div class="config-titulo">
+          <h3>Inventario</h3>
+          <p>En Productos se marca como "stock bajo" cuando quedan estas unidades o menos.</p>
+        </div>
+
+        <div class="producto-form">
+          <div class="campo-producto">
+            <label for="stockBajo">Alerta de stock bajo (unidades)</label>
+            <input id="stockBajo" type="number" min="0" max="1000" step="1" inputmode="numeric">
+          </div>
+        </div>
+
+      </section>
+
+
+      <!-- GUARDAR -->
+
+      <div class="config-barra">
+        <span id="mensajeConfig" class="config-mensaje" role="status" aria-live="polite"></span>
+        <button id="btnDeshacer" type="button" class="btn-cotizacion-secundario" disabled>Deshacer cambios</button>
+        <button id="btnGuardar" type="submit" class="btn-cotizacion-principal" disabled>Guardar cambios</button>
+      </div>
+
+    </form>
+
+  </main>
+
+  <script src="js/configuracion.js"></script>
+
+</body>
+</html>
