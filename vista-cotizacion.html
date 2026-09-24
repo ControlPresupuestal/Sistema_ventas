@@ -9,6 +9,7 @@
 
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/ventas.css">
+  <link rel="stylesheet" href="css/operaciones.css">
 </head>
 
 
@@ -92,6 +93,20 @@
       </button>
 
       <button
+        id="btnSeparar"
+        class="btn-cotizacion-secundario"
+        style="display:none;">
+        Separar
+      </button>
+
+      <button
+        id="btnCambio"
+        class="btn-cotizacion-secundario"
+        style="display:none;">
+        Cambio
+      </button>
+
+      <button
         id="btnAnular"
         class="btn-cotizacion-secundario btn-anular"
         style="display:none;">
@@ -109,6 +124,11 @@
       class="aviso-venta"
       style="display:none;">
     </div>
+
+
+    <!-- CAMBIOS REGISTRADOS -->
+
+    <div id="listaCambios" class="lista-cambios" style="display:none;"></div>
 
 
     <!-- DOCUMENTO -->
@@ -384,6 +404,110 @@
           <button id="btnConfirmarVenta" class="btn-cotizacion-principal" disabled>
             Confirmar venta
           </button>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- VENTANA: SEPARAR -->
+
+    <div id="modalSeparar" class="modal-fondo" style="display:none;">
+
+      <div class="modal-caja" role="dialog" aria-modal="true" aria-labelledby="tituloModalSeparar">
+
+        <h3 id="tituloModalSeparar">Separar con adelanto</h3>
+
+        <p class="modal-texto">
+          La clienta deja un adelanto y completa el pago después.
+          El stock se descuenta recién cuando termine de pagar.
+        </p>
+
+        <div class="modal-total">
+          <span>Total</span>
+          <strong>S/ <span id="separarTotal">0.00</span></strong>
+        </div>
+
+        <label class="modal-label" for="montoAdelanto">Adelanto (S/)</label>
+        <input id="montoAdelanto" class="modal-campo" type="number" min="0" step="0.10" inputmode="decimal">
+
+        <label class="modal-label">Método de pago del adelanto</label>
+
+        <div id="separarMetodos" class="metodos-pago">
+          <button type="button" data-metodo="EFECTIVO">💵 Efectivo</button>
+          <button type="button" data-metodo="YAPE">📱 Yape</button>
+          <button type="button" data-metodo="PLIN">📱 Plin</button>
+          <button type="button" data-metodo="TRANSFERENCIA">🏦 Transferencia</button>
+          <button type="button" data-metodo="TARJETA">💳 Tarjeta</button>
+        </div>
+
+        <label class="modal-label" for="notaSeparado">Nota <span style="font-weight:normal;color:#aa9a90;">opcional</span></label>
+        <input id="notaSeparado" class="modal-campo" type="text" maxlength="200" placeholder="Ej. Recoge el sábado">
+
+        <div id="errorSeparar" class="modal-error"></div>
+
+        <div class="acciones-cotizacion">
+          <button id="btnCancelarSeparar" class="btn-cotizacion-secundario" type="button">Cancelar</button>
+          <button id="btnConfirmarSeparar" class="btn-cotizacion-principal" type="button" disabled>Separar</button>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- VENTANA: CAMBIO -->
+
+    <div id="modalCambio" class="modal-fondo" style="display:none;">
+
+      <div class="modal-caja modal-ancha" role="dialog" aria-modal="true" aria-labelledby="tituloModalCambio">
+
+        <h3 id="tituloModalCambio">Cambio de prenda</h3>
+
+        <p class="modal-texto">
+          La prenda devuelta vuelve al stock y la nueva se descuenta. No se devuelve dinero:
+          si la nueva cuesta más, la clienta paga la diferencia.
+        </p>
+
+        <div class="cambio-seccion">
+          <strong>1. ¿Qué devuelve?</strong>
+          <div id="cambioDevuelve"></div>
+        </div>
+
+        <div class="cambio-seccion">
+          <strong>2. ¿Qué se lleva?</strong>
+          <div class="cambio-agregar">
+            <select id="cambioProducto" aria-label="Producto nuevo">
+              <option value="">Cargando productos...</option>
+            </select>
+            <input id="cambioCantidad" type="number" min="1" step="1" value="1" aria-label="Cantidad">
+            <button id="btnAgregarCambio" type="button">+ Agregar</button>
+          </div>
+          <div id="cambioLleva"></div>
+        </div>
+
+        <div id="cambioResumen" class="cambio-resumen"></div>
+
+        <div id="cambioPago" style="display:none;">
+          <label class="modal-label">Método de pago de la diferencia</label>
+          <div id="cambioMetodos" class="metodos-pago">
+          <button type="button" data-metodo="EFECTIVO">💵 Efectivo</button>
+          <button type="button" data-metodo="YAPE">📱 Yape</button>
+          <button type="button" data-metodo="PLIN">📱 Plin</button>
+          <button type="button" data-metodo="TRANSFERENCIA">🏦 Transferencia</button>
+          <button type="button" data-metodo="TARJETA">💳 Tarjeta</button>
+          </div>
+        </div>
+
+        <label class="modal-label" for="motivoCambio">Motivo</label>
+        <input id="motivoCambio" class="modal-campo" type="text" maxlength="200" placeholder="Ej. No le quedó la talla">
+
+        <div id="errorCambio" class="modal-error"></div>
+
+        <div class="acciones-cotizacion">
+          <button id="btnCancelarCambio" class="btn-cotizacion-secundario" type="button">Cancelar</button>
+          <button id="btnConfirmarCambio" class="btn-cotizacion-principal" type="button" disabled>Registrar cambio</button>
         </div>
 
       </div>
