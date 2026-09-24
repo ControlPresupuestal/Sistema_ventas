@@ -303,3 +303,130 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ==================================
+   VENTA RÁPIDA Y WHATSAPP
+================================== */
+
+.btn-cobrar-ahora {
+  width: 100%;
+  height: 48px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 9px;
+  background: #b1844b;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-cobrar-ahora:hover {
+  background: #9c7240;
+}
+
+.btn-cobrar-ahora:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.nota-cobrar {
+  margin: 8px 0 0;
+  color: #9a897e;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.btn-whatsapp {
+  background: #e3efe3 !important;
+  color: #2f5a35 !important;
+}
+
+.whatsapp-opciones {
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.whatsapp-opcion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid #eadfd4;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #4c2d20;
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.whatsapp-opcion:hover {
+  border-color: #c79b43;
+}
+
+.whatsapp-opcion:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.whatsapp-opcion > span:first-child {
+  font-size: 22px;
+}
+
+.whatsapp-opcion strong {
+  display: block;
+}
+
+.whatsapp-opcion small {
+  color: #9a897e;
+}
+
+.whatsapp-telefono {
+  width: 100%;
+  height: 44px;
+  border: 1px solid #d9d0c8;
+  border-radius: 9px;
+  padding: 0 12px;
+  color: #4c2d20;
+  margin-bottom: 4px;
+}
+
+.modal-texto-previa {
+  max-height: 170px;
+  overflow: auto;
+  white-space: pre-wrap;
+  background: #faf6f1;
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #6f5a4d;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+
+.modal-nota-wa {
+  margin: 12px 0 0;
+  color: #9a897e;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 650px) {
+
+  /* Botones en filas parejas en el celular */
+  .vista-acciones .btn-cotizacion-secundario {
+    flex: 1 1 28%;
+    padding: 0 8px;
+  }
+
+  .vista-acciones a.btn-cotizacion-secundario,
+  .vista-acciones .btn-anular {
+    flex-basis: 100%;
+  }
+}
