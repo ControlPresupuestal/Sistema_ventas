@@ -1151,9 +1151,184 @@ async function cargarSugerenciasClientes() {
 
 
 // ======================================================
+// COBRAR AHORA (venta rápida)
+// ======================================================
+
+const btnCobrar = document.getElementById("btnCobrarAhora");
+const modalCobrar = document.getElementById("modalCobrar");
+const btnConfirmarCobro = document.getElementById("btnConfirmarCobro");
+const cobrarError = document.getElementById("cobrarError");
+
+const CLIENTE_MOSTRADOR = "Cliente de mostrador";
+
+let metodoCobro = "";
+let cobrando = false;
+
+
+async function cargarMetodosActivos() {
+
+  try {
+
+    const parametros = new URLSearchParams({ accion: "configuracion", token: usuario.token });
+    const respuesta = await fetch(`${API_URL}?${parametros.toString()}`);
+    const datos = await respuesta.json();
+
+    if (!datos.ok || !datos.configuracion) return;
+
+    const activos = datos.configuracion.metodosActivos || [];
+
+    document.querySelectorAll("#cobrarMetodos button[data-metodo]").forEach(boton => {
+      boton.style.display = activos.includes(boton.dataset.metodo) ? "" : "none";
+    });
+
+  } catch (error) {
+    // Si falla, se muestran todos; el servidor valida igual
+    console.error(error);
+  }
+}
+
+
+function totalActual() {
+
+  const subtotal = detalle.reduce((suma, item) => suma + item.cantidad * item.precio, 0);
+  const descuento = Math.min(Math.max(Number(descuentoInput.value) || 0, 0), subtotal);
+
+  return { subtotal, descuento, total: subtotal - descuento };
+}
+
+
+function abrirCobro() {
+
+  if (detalle.length === 0) {
+    alert("Agrega al menos un producto.");
+    return;
+  }
+
+  const cliente = document.getElementById("cliente").value.trim();
+
+  document.getElementById("cobrarCliente").textContent = cliente || CLIENTE_MOSTRADOR;
+  document.getElementById("cobrarTotal").textContent = totalActual().total.toFixed(2);
+
+  metodoCobro = "";
+  cobrarError.textContent = "";
+  btnConfirmarCobro.disabled = true;
+  btnConfirmarCobro.textContent = "Confirmar venta";
+
+  document.querySelectorAll("#cobrarMetodos button").forEach(b => b.classList.remove("activo"));
+
+  modalCobrar.style.display = "flex";
+}
+
+
+function cerrarCobro() {
+  if (cobrando) return;
+  modalCobrar.style.display = "none";
+}
+
+
+btnCobrar.addEventListener("click", abrirCobro);
+
+document.getElementById("btnCancelarCobro").addEventListener("click", cerrarCobro);
+
+modalCobrar.addEventListener("click", (event) => {
+  if (event.target === modalCobrar) cerrarCobro();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && modalCobrar.style.display !== "none") cerrarCobro();
+});
+
+document.getElementById("cobrarMetodos").addEventListener("click", (event) => {
+
+  const boton = event.target.closest("button[data-metodo]");
+
+  if (!boton || cobrando) return;
+
+  document.querySelectorAll("#cobrarMetodos button").forEach(b => b.classList.toggle("activo", b === boton));
+
+  metodoCobro = boton.dataset.metodo;
+  btnConfirmarCobro.disabled = false;
+});
+
+
+btnConfirmarCobro.addEventListener("click", async () => {
+
+  if (!metodoCobro || cobrando) return;
+
+  cobrando = true;
+  btnConfirmarCobro.disabled = true;
+  btnConfirmarCobro.textContent = "Registrando...";
+  btnGuardar.disabled = true;
+  btnCobrar.disabled = true;
+  cobrarError.textContent = "";
+
+  try {
+
+    const respuesta = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        accion: "ventaDirecta",
+        token: usuario.token,
+        cliente: document.getElementById("cliente").value.trim(),
+        descuento: totalActual().descuento,
+        productos: detalle,
+        metodoPago: metodoCobro
+      })
+    });
+
+    const datos = await respuesta.json();
+
+    if (!datos.ok) {
+
+      if (datos.sesionExpirada) {
+        sessionStorage.removeItem("zareinaUsuario");
+        alert(datos.mensaje);
+        window.location.href = "index.html";
+        return;
+      }
+
+      // La cotización quedó guardada pero la venta no: se abre para reintentar
+      if (datos.cotizacionGuardada) {
+        alert(datos.mensaje);
+        window.location.href =
+          `vista-cotizacion.html?numero=${encodeURIComponent(datos.cotizacionGuardada)}`;
+        return;
+      }
+
+      throw new Error(datos.mensaje);
+    }
+
+    // La vista de la cotización muestra el aviso de venta registrada
+    try {
+      sessionStorage.setItem("zareinaAvisoVenta", JSON.stringify(datos.venta));
+    } catch (e) {
+      console.error(e);
+    }
+
+    window.location.href =
+      `vista-cotizacion.html?numero=${encodeURIComponent(datos.cotizacion.numero)}`;
+
+  } catch (error) {
+
+    console.error(error);
+
+    cobrando = false;
+    cobrarError.textContent = error.message || "No se pudo registrar la venta.";
+    btnConfirmarCobro.disabled = false;
+    btnConfirmarCobro.textContent = "Confirmar venta";
+    btnGuardar.disabled = false;
+    btnCobrar.disabled = false;
+  }
+});
+
+
+
+// ======================================================
 // ARRANQUE
 // ======================================================
 
 cargarProductos();
 
 cargarSugerenciasClientes();
+
+cargarMetodosActivos();
