@@ -1124,7 +1124,36 @@ function escaparHTML(texto) {
 
 
 // ======================================================
+// SUGERENCIAS DE CLIENTES
+// ======================================================
+
+async function cargarSugerenciasClientes() {
+
+  try {
+
+    const parametros = new URLSearchParams({ accion: "clientes", token: usuario.token });
+    const respuesta = await fetch(`${API_URL}?${parametros.toString()}`);
+    const datos = await respuesta.json();
+
+    if (!datos.ok) return;
+
+    document.getElementById("sugerenciasClientes").innerHTML = (datos.clientes || [])
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))
+      .map(c => `<option value="${escaparHTML(c.nombre)}">${escaparHTML(c.telefono || "")}</option>`)
+      .join("");
+
+  } catch (error) {
+    // Las sugerencias son opcionales
+    console.error(error);
+  }
+}
+
+
+
+// ======================================================
 // ARRANQUE
 // ======================================================
 
 cargarProductos();
+
+cargarSugerenciasClientes();
