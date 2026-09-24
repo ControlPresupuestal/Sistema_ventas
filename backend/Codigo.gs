@@ -4,6 +4,7 @@ const NOMBRE_HOJA_COTIZACIONES = 'COTIZACIONES';
 const NOMBRE_HOJA_DETALLE = 'DETALLE_COTIZACION';
 const NOMBRE_HOJA_VENTAS = 'VENTAS';
 const NOMBRE_HOJA_ANULACIONES = 'ANULACIONES';
+const NOMBRE_HOJA_CLIENTES = 'CLIENTES';
 
 const METODOS_PAGO = ['EFECTIVO', 'YAPE', 'PLIN', 'TRANSFERENCIA', 'TARJETA'];
 
@@ -42,6 +43,18 @@ function doGet(e) {
 
   if (accion === 'inventario') {
     return listarInventario(p);
+  }
+
+  if (accion === 'clientes') {
+    return listarClientes(p);
+  }
+
+  if (accion === 'reportes') {
+    return obtenerReportes(p);
+  }
+
+  if (accion === 'usuarios') {
+    return listarUsuarios(p);
   }
 
   if (accion === 'login' || accion === 'guardarcotizacion') {
@@ -92,6 +105,14 @@ function doPost(e) {
 
     if (accion === 'guardarproducto') {
       return guardarProducto(datos);
+    }
+
+    if (accion === 'guardarcliente') {
+      return guardarCliente(datos);
+    }
+
+    if (accion === 'guardarusuario') {
+      return guardarUsuario(datos);
     }
 
     if (accion === 'logout') {
@@ -241,7 +262,8 @@ function loginUsuario(usuarioIn, claveIn) {
     id: encontrado[0],
     nombre: encontrado[1],
     usuario: encontrado[2],
-    rol: encontrado[4]
+    rol: encontrado[4],
+    creada: Date.now()
   };
 
   cache.put(
@@ -267,11 +289,25 @@ function validarSesion(token) {
     return null;
   }
 
-  const sesion = CacheService
-    .getScriptCache()
-    .get('SESION_' + token);
+  const cache = CacheService.getScriptCache();
+  const sesion = cache.get('SESION_' + token);
 
-  return sesion ? JSON.parse(sesion) : null;
+  if (!sesion) {
+    return null;
+  }
+
+  const datos = JSON.parse(sesion);
+
+  // Sesiones cerradas por la administradora (usuario desactivado,
+  // contraseña o rol cambiados)
+  const revocado = Number(cache.get('REVOCADO_' + String(datos.usuario || '').trim().toLowerCase()) || 0);
+
+  if (revocado && (!datos.creada || datos.creada <= revocado)) {
+    cache.remove('SESION_' + token);
+    return null;
+  }
+
+  return datos;
 }
 
 function cerrarSesion(token) {
@@ -478,6 +514,8 @@ function guardarCotizacion(datos) {
     hojaDetalle
       .getRange(hojaDetalle.getLastRow() + 1, 1, filasDetalle.length, 8)
       .setValues(filasDetalle);
+
+    registrarClienteSiNoExiste(ss, cliente);
 
     return responderJSON({
       ok: true,
@@ -1348,6 +1386,539 @@ function generarIdProducto(ids) {
   } while (ids.indexOf(nuevo) !== -1);
 
   return nuevo;
+}
+
+
+// ======================================================
+// UTILIDADES COMUNES
+// ======================================================
+
+function esAdministradora(sesion) {
+  return String((sesion && sesion.rol) || '').trim().toUpperCase() === 'ADMINISTRADOR';
+}
+
+function normalizarTexto(texto) {
+  return String(texto || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+function fechaISO(valor) {
+  const fecha = valor instanceof Date ? valor : new Date(valor);
+  return isNaN(fecha.getTime())
+    ? ''
+    : Utilities.formatDate(fecha, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+}
+
+function leerHoja(ss, nombre, columnas) {
+  const hoja = ss.getSheetByName(nombre);
+  if (!hoja || hoja.getLastRow() < 2) return [];
+  return hoja.getRange(2, 1, hoja.getLastRow() - 1, columnas).getValues();
+}
+
+
+// ======================================================
+// CLIENTES
+// ======================================================
+
+function obtenerHojaClientes(ss) {
+
+  let hoja = ss.getSheetByName(NOMBRE_HOJA_CLIENTES);
+
+  if (!hoja) {
+    hoja = ss.insertSheet(NOMBRE_HOJA_CLIENTES);
+    hoja.appendRow(['ID', 'NOMBRE', 'TELEFONO', 'DOCUMENTO', 'EMAIL', 'NOTAS', 'FECHA_REGISTRO']);
+    hoja.setFrozenRows(1);
+  }
+
+  return hoja;
+}
+
+
+function siguienteIdCliente(hoja) {
+
+  let mayor = 0;
+
+  if (hoja.getLastRow() >= 2) {
+    hoja.getRange(2, 1, hoja.getLastRow() - 1, 1).getDisplayValues().flat().forEach(v => {
+      const m = String(v).match(/^CLI-(\d+)$/i);
+      if (m) mayor = Math.max(mayor, Number(m[1]));
+    });
+  }
+
+  return 'CLI-' + String(mayor + 1).padStart(5, '0');
+}
+
+
+// Se llama al guardar una cotización: si el cliente no existe, se crea solo con su nombre.
+function registrarClienteSiNoExiste(ss, nombre) {
+
+  try {
+
+    const hoja = obtenerHojaClientes(ss);
+    const clave = normalizarTexto(nombre);
+
+    if (!clave) return;
+
+    const existe = hoja.getLastRow() >= 2 && hoja
+      .getRange(2, 2, hoja.getLastRow() - 1, 1)
+      .getValues()
+      .some(fila => normalizarTexto(fila[0]) === clave);
+
+    if (!existe) {
+      hoja.appendRow([siguienteIdCliente(hoja), textoSeguro(nombre), '', '', '', '', new Date()]);
+    }
+
+  } catch (error) {
+    // Nunca debe impedir que se guarde la cotización.
+    console.error(error);
+  }
+}
+
+
+function listarClientes(p) {
+
+  if (!validarSesion(p.token)) {
+    return respuestaSesionVencida();
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hoja = obtenerHojaClientes(ss);
+
+  // Estadísticas por nombre de cliente
+  const estadisticas = {};
+
+  const stats = clave => estadisticas[clave] || (estadisticas[clave] = {
+    cotizaciones: 0, compras: 0, total: 0, ultimaCompra: ''
+  });
+
+  leerHoja(ss, NOMBRE_HOJA_COTIZACIONES, 7).forEach(fila => {
+    if (String(fila[0]).trim()) stats(normalizarTexto(fila[2])).cotizaciones += 1;
+  });
+
+  leerHoja(ss, NOMBRE_HOJA_VENTAS, 8).forEach(fila => {
+    if (!String(fila[0]).trim()) return;
+    if (String(fila[7] || '').trim().toUpperCase() === 'ANULADA') return;
+    const e = stats(normalizarTexto(fila[3]));
+    e.compras += 1;
+    e.total += Number(fila[4]) || 0;
+    const f = fechaISO(fila[1]);
+    if (f > e.ultimaCompra) e.ultimaCompra = f;
+  });
+
+  const clientes = leerHoja(ss, NOMBRE_HOJA_CLIENTES, 7)
+    .filter(fila => String(fila[0]).trim())
+    .map(fila => {
+      const e = estadisticas[normalizarTexto(fila[1])] || {};
+      return {
+        id: String(fila[0]).trim(),
+        nombre: String(fila[1]).trim(),
+        telefono: String(fila[2]).trim(),
+        documento: String(fila[3]).trim(),
+        email: String(fila[4]).trim(),
+        notas: String(fila[5]).trim(),
+        registro: fechaISO(fila[6]),
+        cotizaciones: e.cotizaciones || 0,
+        compras: e.compras || 0,
+        total: Math.round((e.total || 0) * 100) / 100,
+        ultimaCompra: e.ultimaCompra || ''
+      };
+    });
+
+  return responderJSON({ ok: true, clientes: clientes });
+}
+
+
+function guardarCliente(datos) {
+
+  const sesion = validarSesion(datos.token);
+
+  if (!sesion) {
+    return respuestaSesionVencida();
+  }
+
+  const id = String(datos.id || '').trim();
+  const nombre = String(datos.nombre || '').trim().replace(/\s+/g, ' ');
+  const telefono = String(datos.telefono || '').trim();
+  const documento = String(datos.documento || '').trim();
+  const email = String(datos.email || '').trim();
+  const notas = String(datos.notas || '').trim().slice(0, 300);
+
+  if (nombre.length < 2) {
+    return responderJSON({ ok: false, mensaje: 'Escribe el nombre del cliente.' });
+  }
+
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return responderJSON({ ok: false, mensaje: 'El correo no es válido.' });
+  }
+
+  const lock = LockService.getScriptLock();
+
+  try {
+
+    lock.waitLock(15000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const hoja = obtenerHojaClientes(ss);
+    const filas = leerHoja(ss, NOMBRE_HOJA_CLIENTES, 7);
+
+    const repetido = filas.find(fila =>
+      String(fila[0]).trim() !== id &&
+      normalizarTexto(fila[1]) === normalizarTexto(nombre)
+    );
+
+    if (repetido) {
+      throw new Error('Ya existe un cliente llamado "' + String(repetido[1]).trim() + '".');
+    }
+
+    const telefonoLimpio = telefono.replace(/\D/g, '');
+
+    if (telefonoLimpio) {
+      const mismoTelefono = filas.find(fila =>
+        String(fila[0]).trim() !== id &&
+        String(fila[2]).replace(/\D/g, '') === telefonoLimpio
+      );
+      if (mismoTelefono) {
+        throw new Error('Ese teléfono ya es de "' + String(mismoTelefono[1]).trim() + '".');
+      }
+    }
+
+    const valores = [textoSeguro(nombre), textoSeguro(telefono), textoSeguro(documento), textoSeguro(email), textoSeguro(notas)];
+
+    let idFinal = id;
+
+    if (id) {
+
+      const indice = filas.findIndex(fila => String(fila[0]).trim() === id);
+
+      if (indice === -1) {
+        throw new Error('No se encontró el cliente ' + id);
+      }
+
+      hoja.getRange(indice + 2, 2, 1, 5).setValues([valores]);
+
+    } else {
+
+      idFinal = siguienteIdCliente(hoja);
+      hoja.appendRow([idFinal].concat(valores, [new Date()]));
+    }
+
+    SpreadsheetApp.flush();
+
+    return responderJSON({
+      ok: true,
+      cliente: { id: idFinal, nombre: nombre, telefono: telefono, documento: documento, email: email, notas: notas },
+      nuevo: !id
+    });
+
+  } catch (error) {
+
+    return responderJSON({ ok: false, mensaje: error.message });
+
+  } finally {
+
+    lock.releaseLock();
+  }
+}
+
+
+// ======================================================
+// REPORTES (solo administradora)
+// ======================================================
+
+function obtenerReportes(p) {
+
+  const sesion = validarSesion(p.token);
+
+  if (!sesion) {
+    return respuestaSesionVencida();
+  }
+
+  if (!esAdministradora(sesion)) {
+    return responderJSON({ ok: false, mensaje: 'Solo la administradora puede ver los reportes.' });
+  }
+
+  const desde = String(p.desde || '').trim();
+  const hasta = String(p.hasta || '').trim();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || !/^\d{4}-\d{2}-\d{2}$/.test(hasta) || desde > hasta) {
+    return responderJSON({ ok: false, mensaje: 'Rango de fechas no válido.' });
+  }
+
+  const enRango = f => f && f >= desde && f <= hasta;
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  const ventasVigentes = [];
+  let anuladas = 0;
+
+  leerHoja(ss, NOMBRE_HOJA_VENTAS, 8).forEach(fila => {
+    if (!String(fila[0]).trim()) return;
+    const f = fechaISO(fila[1]);
+    if (!enRango(f)) return;
+    if (String(fila[7] || '').trim().toUpperCase() === 'ANULADA') { anuladas += 1; return; }
+    ventasVigentes.push({
+      fecha: f,
+      cotizacion: String(fila[2]).trim().toUpperCase(),
+      total: Number(fila[4]) || 0,
+      metodo: String(fila[5] || '').trim() || 'SIN DATO',
+      vendedora: String(fila[6] || '').trim() || 'Sin registrar'
+    });
+  });
+
+  let cotizacionesRango = 0;
+
+  leerHoja(ss, NOMBRE_HOJA_COTIZACIONES, 7).forEach(fila => {
+    if (String(fila[0]).trim() && enRango(fechaISO(fila[1]))) cotizacionesRango += 1;
+  });
+
+  const agrupar = (lista, campo) => {
+    const mapa = {};
+    lista.forEach(v => {
+      const k = v[campo];
+      mapa[k] = mapa[k] || { nombre: k, ventas: 0, total: 0 };
+      mapa[k].ventas += 1;
+      mapa[k].total += v.total;
+    });
+    return Object.keys(mapa).map(k => mapa[k]).sort((a, b) => b.total - a.total);
+  };
+
+  // Ventas por día (todos los días del rango, incluidos los que no tienen ventas)
+  const porDiaMapa = {};
+  ventasVigentes.forEach(v => {
+    porDiaMapa[v.fecha] = porDiaMapa[v.fecha] || { ventas: 0, total: 0 };
+    porDiaMapa[v.fecha].ventas += 1;
+    porDiaMapa[v.fecha].total += v.total;
+  });
+
+  const porDia = [];
+  const inicio = new Date(desde + 'T12:00:00');
+  const fin = new Date(hasta + 'T12:00:00');
+
+  for (let d = new Date(inicio); d <= fin && porDia.length < 400; d.setDate(d.getDate() + 1)) {
+    const clave = Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    const x = porDiaMapa[clave] || { ventas: 0, total: 0 };
+    porDia.push({ fecha: clave, ventas: x.ventas, total: Math.round(x.total * 100) / 100 });
+  }
+
+  // Productos más vendidos
+  const cotizacionesVendidas = {};
+  ventasVigentes.forEach(v => { cotizacionesVendidas[v.cotizacion] = true; });
+
+  const productosMapa = {};
+
+  leerHoja(ss, NOMBRE_HOJA_DETALLE, 8).forEach(fila => {
+    if (!cotizacionesVendidas[String(fila[0]).trim().toUpperCase()]) return;
+    const nombre = String(fila[2]).trim();
+    productosMapa[nombre] = productosMapa[nombre] || { nombre: nombre, unidades: 0, total: 0 };
+    productosMapa[nombre].unidades += Number(fila[5]) || 0;
+    productosMapa[nombre].total += Number(fila[7]) || 0;
+  });
+
+  const productos = Object.keys(productosMapa)
+    .map(k => productosMapa[k])
+    .sort((a, b) => b.unidades - a.unidades || b.total - a.total)
+    .slice(0, 10);
+
+  const totalVendido = ventasVigentes.reduce((s, v) => s + v.total, 0);
+  const redondear = lista => lista.map(x => Object.assign({}, x, { total: Math.round(x.total * 100) / 100 }));
+
+  return responderJSON({
+    ok: true,
+    reporte: {
+      desde: desde,
+      hasta: hasta,
+      totalVendido: Math.round(totalVendido * 100) / 100,
+      ventas: ventasVigentes.length,
+      ticketPromedio: ventasVigentes.length ? Math.round(totalVendido / ventasVigentes.length * 100) / 100 : 0,
+      cotizaciones: cotizacionesRango,
+      anuladas: anuladas,
+      porDia: porDia,
+      porMetodo: redondear(agrupar(ventasVigentes, 'metodo')),
+      porVendedora: redondear(agrupar(ventasVigentes, 'vendedora')),
+      productos: redondear(productos)
+    }
+  });
+}
+
+
+// ======================================================
+// USUARIOS (solo administradora)
+// ======================================================
+
+function listarUsuarios(p) {
+
+  const sesion = validarSesion(p.token);
+
+  if (!sesion) {
+    return respuestaSesionVencida();
+  }
+
+  if (!esAdministradora(sesion)) {
+    return responderJSON({ ok: false, mensaje: 'Solo la administradora puede ver los usuarios.' });
+  }
+
+  const usuarios = leerHoja(SpreadsheetApp.getActiveSpreadsheet(), NOMBRE_HOJA_USUARIOS, 6)
+    .filter(fila => String(fila[2]).trim())
+    .map(fila => ({
+      id: String(fila[0]).trim(),
+      nombre: String(fila[1]).trim(),
+      usuario: String(fila[2]).trim(),
+      rol: String(fila[4]).trim().toUpperCase(),
+      estado: String(fila[5]).trim().toUpperCase() === 'ACTIVO' ? 'ACTIVO' : 'INACTIVO',
+      claveCifrada: esHash(String(fila[3]).trim())
+    }));
+
+  return responderJSON({ ok: true, usuarios: usuarios, yo: String(sesion.usuario || '').trim().toLowerCase() });
+}
+
+
+function guardarUsuario(datos) {
+
+  const sesion = validarSesion(datos.token);
+
+  if (!sesion) {
+    return respuestaSesionVencida();
+  }
+
+  if (!esAdministradora(sesion)) {
+    return responderJSON({ ok: false, mensaje: 'Solo la administradora puede modificar usuarios.' });
+  }
+
+  const id = String(datos.id || '').trim();
+  const nombre = String(datos.nombre || '').trim().replace(/\s+/g, ' ');
+  const usuario = String(datos.usuario || '').trim().toLowerCase();
+  const clave = String(datos.clave || '').trim();
+  const rol = String(datos.rol || '').trim().toUpperCase();
+  const estado = String(datos.estado || 'ACTIVO').trim().toUpperCase();
+
+  if (nombre.length < 2) {
+    return responderJSON({ ok: false, mensaje: 'Escribe el nombre.' });
+  }
+
+  if (!/^[a-z0-9._-]{3,30}$/.test(usuario)) {
+    return responderJSON({ ok: false, mensaje: 'El usuario debe tener de 3 a 30 caracteres: letras, números, punto, guion.' });
+  }
+
+  if (!/^[A-ZÁÉÍÓÚÑ ]{3,30}$/.test(rol)) {
+    return responderJSON({ ok: false, mensaje: 'Rol no válido.' });
+  }
+
+  if (estado !== 'ACTIVO' && estado !== 'INACTIVO') {
+    return responderJSON({ ok: false, mensaje: 'Estado no válido.' });
+  }
+
+  if (clave && clave.length < 6) {
+    return responderJSON({ ok: false, mensaje: 'La contraseña debe tener al menos 6 caracteres.' });
+  }
+
+  const lock = LockService.getScriptLock();
+
+  try {
+
+    lock.waitLock(15000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const hoja = ss.getSheetByName(NOMBRE_HOJA_USUARIOS);
+
+    if (!hoja) {
+      throw new Error('No existe la hoja USUARIOS.');
+    }
+
+    const filas = leerHoja(ss, NOMBRE_HOJA_USUARIOS, 6);
+
+    const repetido = filas.find(fila =>
+      String(fila[0]).trim() !== id &&
+      String(fila[2]).trim().toLowerCase() === usuario
+    );
+
+    if (repetido) {
+      throw new Error('El usuario "' + usuario + '" ya existe.');
+    }
+
+    const esAdminActiva = fila =>
+      String(fila[4]).trim().toUpperCase() === 'ADMINISTRADOR' &&
+      String(fila[5]).trim().toUpperCase() === 'ACTIVO';
+
+    if (id) {
+
+      const indice = filas.findIndex(fila => String(fila[0]).trim() === id);
+
+      if (indice === -1) {
+        throw new Error('No se encontró el usuario.');
+      }
+
+      const actual = filas[indice];
+      const usuarioAnterior = String(actual[2]).trim().toLowerCase();
+      const claveActual = String(actual[3]).trim();
+
+      // No quedarse sin administradora activa
+      const quedaAdmin = rol === 'ADMINISTRADOR' && estado === 'ACTIVO';
+      const otrasAdmins = filas.filter((fila, i) => i !== indice && esAdminActiva(fila)).length;
+
+      if (esAdminActiva(actual) && !quedaAdmin && otrasAdmins === 0) {
+        throw new Error('Debe quedar al menos una administradora activa.');
+      }
+
+      if (usuarioAnterior === String(sesion.usuario || '').trim().toLowerCase() && !quedaAdmin) {
+        throw new Error('No puedes quitarte tu propio acceso de administradora.');
+      }
+
+      let claveFinal = claveActual;
+
+      if (clave) {
+        claveFinal = hashClave(usuario, clave);
+      } else if (usuario !== usuarioAnterior) {
+        if (esHash(claveActual)) {
+          throw new Error('Al cambiar el nombre de usuario debes asignar una nueva contraseña.');
+        }
+        claveFinal = claveActual; // texto plano: se cifrará en su próximo ingreso
+      }
+
+      hoja.getRange(indice + 2, 2, 1, 5).setValues([[
+        textoSeguro(nombre), usuario, claveFinal, rol, estado
+      ]]);
+
+      const cambioAcceso =
+        clave ||
+        usuario !== usuarioAnterior ||
+        rol !== String(actual[4]).trim().toUpperCase() ||
+        estado !== 'ACTIVO';
+
+      if (cambioAcceso && usuarioAnterior !== String(sesion.usuario || '').trim().toLowerCase()) {
+        CacheService.getScriptCache().put('REVOCADO_' + usuarioAnterior, String(Date.now()), DURACION_SESION);
+      }
+
+    } else {
+
+      if (!clave) {
+        throw new Error('Asigna una contraseña al nuevo usuario.');
+      }
+
+      let mayor = 0;
+      filas.forEach(fila => {
+        const n = Number(String(fila[0]).replace(/\D/g, ''));
+        if (!isNaN(n)) mayor = Math.max(mayor, n);
+      });
+
+      hoja.appendRow([mayor + 1, textoSeguro(nombre), usuario, hashClave(usuario, clave), rol, estado]);
+    }
+
+    SpreadsheetApp.flush();
+
+    return responderJSON({ ok: true });
+
+  } catch (error) {
+
+    return responderJSON({ ok: false, mensaje: error.message });
+
+  } finally {
+
+    lock.releaseLock();
+  }
 }
 
 
