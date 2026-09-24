@@ -1,17 +1,23 @@
+const API_URL =
+  "https://script.google.com/macros/s/AKfycbz-_MhTQpHGe4QDduXkLVuOJe1TKyRvtfDbNMCUwPP828W_C2A9XoB8IkhCE9J1XHYH/exec";
+
+
 const datosGuardados =
   sessionStorage.getItem("zareinaUsuario");
 
 
-if (!datosGuardados) {
-
-  window.location.href =
-    "index.html";
-
-}
-
-
 const usuario =
-  JSON.parse(datosGuardados);
+  datosGuardados ? JSON.parse(datosGuardados) : null;
+
+
+if (!usuario || !usuario.token) {
+
+  sessionStorage.removeItem("zareinaUsuario");
+
+  window.location.replace("index.html");
+
+  throw new Error("Sin sesión");
+}
 
 
 const nombreUsuario =
@@ -48,7 +54,7 @@ avatarUsuario.textContent =
 
 
 if (
-  usuario.rol.toUpperCase() !==
+  String(usuario.rol || "").toUpperCase() !==
   "ADMINISTRADOR"
 ) {
 
@@ -73,7 +79,23 @@ if (
 
 btnSalir.addEventListener(
   "click",
-  () => {
+  async () => {
+
+    btnSalir.disabled = true;
+
+    try {
+
+      await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          accion: "logout",
+          token: usuario.token
+        })
+      });
+
+    } catch (error) {
+      console.error(error);
+    }
 
     sessionStorage.removeItem(
       "zareinaUsuario"
