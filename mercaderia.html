@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZAREINA | Mercadería</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/historial.css">
+  <link rel="stylesheet" href="css/ventas.css">
+  <link rel="stylesheet" href="css/productos.css">
+  <link rel="stylesheet" href="css/operaciones.css">
+</head>
+
+<body class="dashboard-page">
+
+  <header class="topbar">
+    <div class="topbar-marca">
+      <span class="estrella">✦</span>
+      <div>
+        <h1>ZAREINA</h1>
+        <small>Moda que eleva tu esencia</small>
+      </div>
+    </div>
+
+    <div class="usuario-header">
+      <div class="usuario-info">
+        <strong id="nombreUsuario"></strong>
+        <span id="rolUsuario"></span>
+      </div>
+
+      <div id="avatarUsuario" class="avatar"></div>
+
+      <a href="dashboard.html" class="btn-volver">
+        ← Inicio
+      </a>
+    </div>
+  </header>
+
+
+  <main class="cotizacion-contenedor">
+
+    <section class="cotizacion-titulo">
+      <div>
+        <span class="etiqueta-zareina">ADMINISTRACIÓN</span>
+        <h2>Ingreso de mercadería</h2>
+        <p>Registra lo que compras: sube el stock y guarda el costo para calcular la ganancia.</p>
+      </div>
+    </section>
+
+
+    <section class="cotizacion-card">
+
+      <div class="op-titulo-card">
+        <h3>Nuevo ingreso</h3>
+        <small>¿Producto nuevo? Créalo primero en <a href="productos.html">Productos</a> con stock 0.</small>
+      </div>
+
+      <div class="ing-cabecera">
+        <div class="campo-producto">
+          <label for="proveedor">Proveedor</label>
+          <input id="proveedor" type="text" maxlength="80" list="listaProveedores" autocomplete="off" placeholder="Ej. Textiles Gamarra">
+          <datalist id="listaProveedores"></datalist>
+        </div>
+        <div class="campo-producto">
+          <label for="notaIngreso">Nota <span style="font-weight:normal;color:#aa9a90;">opcional</span></label>
+          <input id="notaIngreso" type="text" maxlength="200" autocomplete="off" placeholder="Ej. Factura 001-2345">
+        </div>
+      </div>
+
+      <div class="ing-linea">
+        <div class="campo-producto">
+          <label for="producto">Producto (talla · color)</label>
+          <select id="producto">
+            <option value="">Cargando productos...</option>
+          </select>
+        </div>
+        <div class="campo-producto">
+          <label for="cantidad">Cantidad</label>
+          <input id="cantidad" type="number" min="1" step="1" value="1" inputmode="numeric">
+        </div>
+        <div class="campo-producto">
+          <label for="costo">Costo unitario (S/)</label>
+          <input id="costo" type="number" min="0" step="0.10" inputmode="decimal">
+        </div>
+        <button id="btnAgregar" class="btn-cotizacion-secundario" type="button">+ Agregar</button>
+      </div>
+
+      <p id="ayudaProducto" class="ing-ayuda"></p>
+
+      <div class="tabla-responsive" style="margin-top:14px;">
+        <table class="tabla-cotizacion">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Talla</th>
+              <th>Color</th>
+              <th>Cantidad</th>
+              <th>Costo unit.</th>
+              <th>Subtotal</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="lineasIngreso">
+            <tr><td colspan="7" class="cotizacion-vacia">Agrega los productos que llegaron.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ing-total">
+        <span><span id="totalUnidades">0</span> unidades</span>
+        <span>Total: <strong>S/ <span id="totalCosto">0.00</span></strong></span>
+      </div>
+
+      <div class="caja-acciones">
+        <button id="btnGuardarIngreso" class="btn-cotizacion-principal" type="button" disabled>Guardar ingreso</button>
+      </div>
+
+      <div id="mensajeIngreso" class="op-mensaje" role="status" aria-live="polite"></div>
+
+    </section>
+
+
+    <section class="cotizacion-card ing-historial">
+
+      <div class="op-titulo-card">
+        <h3>Ingresos anteriores</h3>
+        <small id="conteoIngresos"></small>
+      </div>
+
+      <div id="historialIngresos">
+        <div class="op-estado">Cargando...</div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="js/mercaderia.js"></script>
+
+</body>
+</html>
