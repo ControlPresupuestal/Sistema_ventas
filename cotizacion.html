@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ZAREINA | Nueva Cotización</title>
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/ventas.css">
 </head>
 
 <body class="dashboard-page">
@@ -276,9 +277,69 @@
 
         </div>
 
+        <button
+          id="btnCobrarAhora"
+          class="btn-cobrar-ahora"
+          type="button"
+        >
+          💳 Cobrar ahora
+        </button>
+
+        <p class="nota-cobrar">
+          Venta rápida: guarda y registra la venta en un solo paso.
+          Si no escribes cliente, queda como "Cliente de mostrador".
+        </p>
+
       </div>
 
     </section>
+
+    <!-- VENTANA: COBRAR AHORA -->
+
+    <div
+      id="modalCobrar"
+      class="modal-fondo"
+      style="display:none;">
+
+      <div class="modal-caja" role="dialog" aria-modal="true" aria-labelledby="tituloModalCobrar">
+
+        <h3 id="tituloModalCobrar">Cobrar ahora</h3>
+
+        <p class="modal-texto">
+          Cliente: <strong id="cobrarCliente"></strong><br>
+          Se registrará la venta y se descontará el stock.
+        </p>
+
+        <div class="modal-total">
+          <span>Total a cobrar</span>
+          <strong>S/ <span id="cobrarTotal">0.00</span></strong>
+        </div>
+
+        <label class="modal-label">Método de pago</label>
+
+        <div id="cobrarMetodos" class="metodos-pago">
+          <button type="button" data-metodo="EFECTIVO">💵 Efectivo</button>
+          <button type="button" data-metodo="YAPE">📱 Yape</button>
+          <button type="button" data-metodo="PLIN">📱 Plin</button>
+          <button type="button" data-metodo="TRANSFERENCIA">🏦 Transferencia</button>
+          <button type="button" data-metodo="TARJETA">💳 Tarjeta</button>
+        </div>
+
+        <div id="cobrarError" class="modal-error"></div>
+
+        <div class="acciones-cotizacion">
+          <button id="btnCancelarCobro" class="btn-cotizacion-secundario" type="button">
+            Cancelar
+          </button>
+
+          <button id="btnConfirmarCobro" class="btn-cotizacion-principal" type="button" disabled>
+            Confirmar venta
+          </button>
+        </div>
+
+      </div>
+
+    </div>
 
   </main>
 
