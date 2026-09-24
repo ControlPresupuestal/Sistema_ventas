@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZAREINA | Reportes</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/historial.css">
+  <link rel="stylesheet" href="css/ventas.css">
+  <link rel="stylesheet" href="css/reportes.css">
+</head>
+
+<body class="dashboard-page">
+
+  <header class="topbar">
+    <div class="topbar-marca">
+      <span class="estrella">✦</span>
+      <div>
+        <h1>ZAREINA</h1>
+        <small>Moda que eleva tu esencia</small>
+      </div>
+    </div>
+
+    <div class="usuario-header">
+      <div class="usuario-info">
+        <strong id="nombreUsuario"></strong>
+        <span id="rolUsuario"></span>
+      </div>
+
+      <div id="avatarUsuario" class="avatar"></div>
+
+      <a href="dashboard.html" class="btn-volver">
+        ← Inicio
+      </a>
+    </div>
+  </header>
+
+
+  <main class="cotizacion-contenedor">
+
+    <section class="cotizacion-titulo">
+      <div>
+        <span class="etiqueta-zareina">ADMINISTRACIÓN</span>
+        <h2>Reportes</h2>
+        <p>Resultados de ventas por periodo.</p>
+      </div>
+    </section>
+
+
+    <!-- PERIODO -->
+
+    <section class="cotizacion-card reporte-filtros">
+
+      <div class="reporte-periodos" id="periodos">
+        <button data-periodo="hoy">Hoy</button>
+        <button data-periodo="7">Últimos 7 días</button>
+        <button data-periodo="mes" class="activo">Este mes</button>
+        <button data-periodo="mesAnterior">Mes anterior</button>
+        <button data-periodo="30">Últimos 30 días</button>
+      </div>
+
+      <div class="reporte-rango">
+        <div class="campo-producto">
+          <label for="desde">Desde</label>
+          <input id="desde" type="date">
+        </div>
+        <div class="campo-producto">
+          <label for="hasta">Hasta</label>
+          <input id="hasta" type="date">
+        </div>
+        <button id="btnAplicar" class="btn-cotizacion-principal">Ver</button>
+      </div>
+
+    </section>
+
+
+    <div id="estadoReporte" class="reporte-estado">Cargando reporte...</div>
+
+
+    <div id="contenidoReporte" style="display:none;">
+
+      <!-- INDICADORES -->
+
+      <section class="reporte-kpis">
+        <div class="kpi kpi-principal">
+          <span>Total vendido</span>
+          <strong id="kTotal">S/ 0.00</strong>
+          <small id="kPeriodo"></small>
+        </div>
+        <div class="kpi">
+          <span>Ventas</span>
+          <strong id="kVentas">0</strong>
+          <small id="kAnuladas"></small>
+        </div>
+        <div class="kpi">
+          <span>Ticket promedio</span>
+          <strong id="kTicket">S/ 0.00</strong>
+          <small>por venta</small>
+        </div>
+        <div class="kpi">
+          <span>Cotizaciones</span>
+          <strong id="kCotizaciones">0</strong>
+          <small id="kConversion"></small>
+        </div>
+      </section>
+
+
+      <!-- VENTAS POR DÍA -->
+
+      <section class="cotizacion-card reporte-card">
+
+        <div class="reporte-card-titulo">
+          <h3 id="tituloSerie">Ventas por día</h3>
+          <button id="btnVerTabla" class="reporte-link">Ver tabla</button>
+        </div>
+
+        <div id="graficoDias" class="grafico-dias"></div>
+        <div id="tooltip" class="grafico-tooltip" role="status" aria-live="polite"></div>
+
+        <div id="tablaDias" class="tabla-responsive" style="display:none;"></div>
+
+      </section>
+
+
+      <div class="reporte-columnas">
+
+        <section class="cotizacion-card reporte-card">
+          <div class="reporte-card-titulo"><h3>Por método de pago</h3></div>
+          <div id="barrasMetodo"></div>
+        </section>
+
+        <section class="cotizacion-card reporte-card">
+          <div class="reporte-card-titulo"><h3>Por vendedora</h3></div>
+          <div id="barrasVendedora"></div>
+        </section>
+
+      </div>
+
+
+      <section class="cotizacion-card reporte-card">
+        <div class="reporte-card-titulo"><h3>Productos más vendidos</h3><small>por unidades</small></div>
+        <div id="barrasProductos"></div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <script src="js/reportes.js"></script>
+
+</body>
+</html>
