@@ -1,0 +1,93 @@
+/* ==================================
+   CLIENTES
+================================== */
+
+.clientes-filtros {
+  grid-template-columns: 2.4fr 1.2fr auto;
+}
+
+.cliente-contacto {
+  display: block;
+  color: #9a897e;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.cliente-accesos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.cliente-accesos a {
+  flex: 1;
+  min-width: 120px;
+  text-align: center;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: #faf6f1;
+  border: 1px solid #eadfd4;
+  color: #6f442f;
+  font-size: 13px;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.cliente-accesos a:hover {
+  border-color: #c79b43;
+}
+
+.cliente-accesos a.whatsapp {
+  background: #e3efe3;
+  border-color: #c7dec9;
+  color: #2f5a35;
+}
+
+@media (max-width: 900px) {
+  .clientes-filtros {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .clientes-tabla td[data-label="Cliente"] {
+    flex-wrap: wrap;
+  }
+}
+
+
+/* Usuarios */
+
+.modal-nota {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  background: #faf6f1;
+  border-radius: 10px;
+  color: #8e8178;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.chip-rol {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: .5px;
+  background: #f5e9dc;
+  color: #6f442f;
+}
+
+.chip-rol.admin {
+  background: #4c2d20;
+  color: #ffffff;
+}
+
+.etiqueta-tu {
+  margin-left: 6px;
+  font-size: 11px;
+  color: #b1844b;
+  font-weight: bold;
+}
