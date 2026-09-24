@@ -145,6 +145,10 @@ async function cargarCotizacion(numero) {
 
     prepararAnulacion(datos.cotizacion);
 
+    prepararWhatsapp(datos.cotizacion, datos.configuracion || null, datos.clienteTelefono || "");
+
+    avisoVentaRapida(datos.cotizacion.numero);
+
     btnPDF.disabled = false;
     btnImagen.disabled = false;
 
@@ -797,6 +801,46 @@ document.getElementById("metodosPago").addEventListener("click", (event) => {
 });
 
 
+function mostrarAvisoVenta(venta) {
+
+  const aviso = document.getElementById("avisoVenta");
+
+  aviso.innerHTML = `
+    <strong>✓ Venta ${escaparHTML(venta.numero)} registrada</strong>
+    <span>
+      ${escaparHTML(venta.metodoPago)} · S/ ${Number(venta.total).toFixed(2)} ·
+      el stock ya fue descontado.
+    </span>
+    <a href="ventas.html">Ver ventas →</a>
+  `;
+
+  aviso.style.display = "flex";
+}
+
+
+// Aviso que deja la venta rápida al venir desde Nueva cotización
+function avisoVentaRapida(numero) {
+
+  try {
+
+    const guardado = sessionStorage.getItem("zareinaAvisoVenta");
+
+    if (!guardado) return;
+
+    sessionStorage.removeItem("zareinaAvisoVenta");
+
+    const venta = JSON.parse(guardado);
+
+    if (String(venta.cotizacion).toUpperCase() === String(numero).toUpperCase()) {
+      mostrarAvisoVenta(venta);
+    }
+
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+
 btnConfirmarVenta.addEventListener("click", async () => {
 
   if (!metodoElegido || enviandoVenta) return;
@@ -842,20 +886,9 @@ btnConfirmarVenta.addEventListener("click", async () => {
 
     prepararAnulacion({ numero: numeroCargado, estado: "VENDIDO" });
 
-    const aviso = document.getElementById("avisoVenta");
+    mostrarAvisoVenta(venta);
 
-    aviso.innerHTML = `
-      <strong>✓ Venta ${escaparHTML(venta.numero)} registrada</strong>
-      <span>
-        ${escaparHTML(venta.metodoPago)} · S/ ${Number(venta.total).toFixed(2)} ·
-        el stock ya fue descontado.
-      </span>
-      <a href="ventas.html">Ver ventas →</a>
-    `;
-
-    aviso.style.display = "flex";
-
-    aviso.scrollIntoView({ behavior: "smooth", block: "center" });
+    document.getElementById("avisoVenta").scrollIntoView({ behavior: "smooth", block: "center" });
 
   } catch (error) {
 
@@ -1028,6 +1061,198 @@ btnConfirmarAnular.addEventListener("click", async () => {
   } finally {
 
     enviandoAnulacion = false;
+  }
+});
+
+
+
+// ======================================================
+// ENVIAR POR WHATSAPP
+// ======================================================
+
+const btnWhatsapp = document.getElementById("btnWhatsapp");
+const modalWhatsapp = document.getElementById("modalWhatsapp");
+const telefonoWhatsapp = document.getElementById("telefonoWhatsapp");
+const btnCompartirImagen = document.getElementById("btnCompartirImagen");
+
+let datosWhatsapp = null;
+let imagenWhatsapp = null;
+
+btnWhatsapp.disabled = true;
+
+
+function prepararWhatsapp(cotizacion, config, telefono) {
+
+  datosWhatsapp = { cotizacion, config: config || {}, telefono: telefono || "" };
+  btnWhatsapp.disabled = false;
+}
+
+
+function mensajeWhatsapp() {
+
+  const { cotizacion, config } = datosWhatsapp;
+
+  const tienda = config.tiendaNombre || "ZAREINA";
+  const cliente = String(cotizacion.cliente || "").trim();
+  const nombre = cliente && cliente.toLowerCase() !== "cliente de mostrador"
+    ? " " + cliente.split(" ")[0]
+    : "";
+
+  const vendida = String(cotizacion.estado || "").toUpperCase() === "VENDIDO";
+  const soles = n => `S/ ${Number(n || 0).toFixed(2)}`;
+
+  const lineas = [];
+
+  lineas.push(`Hola${nombre} 👋`);
+  lineas.push(vendida
+    ? `Gracias por tu compra en ${tienda}. Este es el detalle (${cotizacion.numero}):`
+    : `Te comparto tu cotización ${cotizacion.numero} de ${tienda}:`);
+  lineas.push("");
+
+  (cotizacion.productos || []).forEach(p => {
+    const variante = [p.talla, p.color].filter(Boolean).join(", ");
+    lineas.push(`• ${p.producto}${variante ? ` (${variante})` : ""} x${p.cantidad} — ${soles(p.total)}`);
+  });
+
+  lineas.push("");
+
+  if (Number(cotizacion.descuento) > 0) {
+    lineas.push(`Subtotal: ${soles(cotizacion.subtotal)}`);
+    lineas.push(`Descuento: -${soles(cotizacion.descuento)}`);
+  }
+
+  lineas.push(`*Total: ${soles(cotizacion.total)}*`);
+
+  if (!vendida) {
+
+    lineas.push(textoValidez(cotizacion.fecha, Number(config.validezDias) || 0));
+
+    const pagos = [
+      config.yapeNumero && (config.metodosActivos || []).includes("YAPE") ? `Yape: ${config.yapeNumero}` : "",
+      config.plinNumero && (config.metodosActivos || []).includes("PLIN") ? `Plin: ${config.plinNumero}` : "",
+      config.cuentaBancaria && (config.metodosActivos || []).includes("TRANSFERENCIA") ? `Transferencia: ${config.cuentaBancaria}` : ""
+    ].filter(Boolean);
+
+    if (pagos.length) {
+      lineas.push("");
+      lineas.push("Formas de pago:");
+      pagos.forEach(x => lineas.push(x));
+    }
+  }
+
+  lineas.push("");
+  lineas.push(`¡Gracias por elegir ${tienda}! ✨`);
+
+  return lineas.join("\n");
+}
+
+
+// Deja el número listo para wa.me (Perú: 9 dígitos → 51 + número)
+function numeroWhatsapp(texto) {
+
+  const digitos = String(texto || "").replace(/\D/g, "").replace(/^00/, "");
+
+  if (/^9\d{8}$/.test(digitos)) return "51" + digitos;
+  if (/^51\d{9}$/.test(digitos)) return digitos;
+  if (digitos.length >= 10 && digitos.length <= 15) return digitos;
+
+  return "";
+}
+
+
+async function abrirWhatsapp() {
+
+  if (!datosWhatsapp) return;
+
+  telefonoWhatsapp.value = datosWhatsapp.telefono;
+  document.getElementById("previaWhatsapp").textContent = mensajeWhatsapp();
+  document.getElementById("errorWhatsapp").textContent = "";
+
+  modalWhatsapp.style.display = "flex";
+
+  // La imagen se prepara al abrir: el celular solo permite compartir
+  // justo después de un toque, y generarla toma unos segundos.
+  const puedeCompartir =
+    typeof navigator.canShare === "function" &&
+    navigator.canShare({ files: [new File([""], "x.png", { type: "image/png" })] });
+
+  btnCompartirImagen.style.display = puedeCompartir ? "" : "none";
+  document.getElementById("ayudaImagenPC").style.display = puedeCompartir ? "none" : "";
+
+  if (puedeCompartir && !imagenWhatsapp) {
+
+    btnCompartirImagen.disabled = true;
+    btnCompartirImagen.querySelector("small").textContent = "Preparando imagen...";
+
+    try {
+      const canvas = await capturarDocumento();
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+      imagenWhatsapp = new File([blob], nombreArchivo("png"), { type: "image/png" });
+      btnCompartirImagen.querySelector("small").textContent = "Elige WhatsApp y el chat del cliente";
+    } catch (error) {
+      console.error(error);
+      btnCompartirImagen.querySelector("small").textContent = "No se pudo preparar la imagen";
+    } finally {
+      btnCompartirImagen.disabled = !imagenWhatsapp;
+    }
+  }
+}
+
+
+function cerrarWhatsapp() {
+  modalWhatsapp.style.display = "none";
+}
+
+
+btnWhatsapp.addEventListener("click", abrirWhatsapp);
+
+document.getElementById("btnCerrarWhatsapp").addEventListener("click", cerrarWhatsapp);
+
+modalWhatsapp.addEventListener("click", (event) => {
+  if (event.target === modalWhatsapp) cerrarWhatsapp();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && modalWhatsapp.style.display !== "none") cerrarWhatsapp();
+});
+
+
+document.getElementById("btnEnviarMensaje").addEventListener("click", () => {
+
+  const escrito = telefonoWhatsapp.value.trim();
+  const numero = numeroWhatsapp(escrito);
+
+  if (escrito && !numero) {
+    document.getElementById("errorWhatsapp").textContent =
+      "El número no parece válido. Déjalo vacío para elegir el contacto en WhatsApp.";
+    telefonoWhatsapp.focus();
+    return;
+  }
+
+  const texto = encodeURIComponent(mensajeWhatsapp());
+
+  window.open(
+    numero ? `https://wa.me/${numero}?text=${texto}` : `https://wa.me/?text=${texto}`,
+    "_blank",
+    "noopener"
+  );
+});
+
+
+btnCompartirImagen.addEventListener("click", async () => {
+
+  if (!imagenWhatsapp) return;
+
+  try {
+
+    await navigator.share({ files: [imagenWhatsapp], text: mensajeWhatsapp() });
+
+  } catch (error) {
+
+    if (error && error.name === "AbortError") return;
+
+    console.error(error);
+    document.getElementById("errorWhatsapp").textContent = "No se pudo compartir la imagen.";
   }
 });
 
