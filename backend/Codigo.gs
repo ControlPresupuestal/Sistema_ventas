@@ -3,6 +3,7 @@ const NOMBRE_HOJA_PRODUCTOS = 'PRODUCTOS';
 const NOMBRE_HOJA_COTIZACIONES = 'COTIZACIONES';
 const NOMBRE_HOJA_DETALLE = 'DETALLE_COTIZACION';
 const NOMBRE_HOJA_VENTAS = 'VENTAS';
+const NOMBRE_HOJA_ANULACIONES = 'ANULACIONES';
 
 const METODOS_PAGO = ['EFECTIVO', 'YAPE', 'PLIN', 'TRANSFERENCIA', 'TARJETA'];
 
@@ -79,6 +80,10 @@ function doPost(e) {
 
     if (accion === 'registrarventa') {
       return registrarVenta(datos);
+    }
+
+    if (accion === 'anularcotizacion') {
+      return anularCotizacion(datos);
     }
 
     if (accion === 'logout') {
@@ -815,7 +820,8 @@ function registrarVenta(datos) {
       textoSeguro(cabecera[2]),
       total,
       metodoPago,
-      textoSeguro(sesion.nombre)
+      textoSeguro(sesion.nombre),
+      'VIGENTE'
     ]);
 
     SpreadsheetApp.flush();
@@ -849,7 +855,7 @@ function obtenerHojaVentas(ss) {
 
   if (!hoja) {
     hoja = ss.insertSheet(NOMBRE_HOJA_VENTAS);
-    hoja.appendRow(['NUMERO', 'FECHA', 'COTIZACION', 'CLIENTE', 'TOTAL', 'METODO_PAGO', 'USUARIO']);
+    hoja.appendRow(['NUMERO', 'FECHA', 'COTIZACION', 'CLIENTE', 'TOTAL', 'METODO_PAGO', 'USUARIO', 'ESTADO']);
     hoja.setFrozenRows(1);
   }
 
@@ -899,7 +905,7 @@ function listarVentas(p) {
   const zona = Session.getScriptTimeZone();
 
   const ventas = hoja
-    .getRange(2, 1, hoja.getLastRow() - 1, 7)
+    .getRange(2, 1, hoja.getLastRow() - 1, 8)
     .getValues()
     .filter(fila => String(fila[0]).trim())
     .map(fila => {
@@ -915,12 +921,218 @@ function listarVentas(p) {
         cliente: String(fila[3]),
         total: Number(fila[4]) || 0,
         metodoPago: String(fila[5] || '').trim(),
-        usuario: String(fila[6] || '').trim()
+        usuario: String(fila[6] || '').trim(),
+        estado: String(fila[7] || '').trim().toUpperCase() || 'VIGENTE'
       };
     })
     .reverse();
 
   return responderJSON({ ok: true, ventas: ventas });
+}
+
+
+// ======================================================
+// ANULAR COTIZACIÓN / VENTA
+// ======================================================
+
+// Si la cotización está vendida, devuelve el stock y marca
+// la venta como ANULADA (solo administradora). Toda
+// anulación queda registrada en la hoja ANULACIONES.
+
+function anularCotizacion(datos) {
+
+  const sesion = validarSesion(datos.token);
+
+  if (!sesion) {
+    return respuestaSesionVencida();
+  }
+
+  const numero = String(datos.numero || '').trim().toUpperCase();
+  const motivo = String(datos.motivo || '').trim();
+
+  if (!numero) {
+    return responderJSON({ ok: false, mensaje: 'Falta el número de cotización.' });
+  }
+
+  if (motivo.length < 3) {
+    return responderJSON({ ok: false, mensaje: 'Escribe el motivo de la anulación.' });
+  }
+
+  const esAdmin = String(sesion.rol || '').trim().toUpperCase() === 'ADMINISTRADOR';
+
+  const lock = LockService.getScriptLock();
+
+  try {
+
+    lock.waitLock(15000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const hojaProductos = ss.getSheetByName(NOMBRE_HOJA_PRODUCTOS);
+    const hojaCotizaciones = ss.getSheetByName(NOMBRE_HOJA_COTIZACIONES);
+    const hojaDetalle = ss.getSheetByName(NOMBRE_HOJA_DETALLE);
+
+    if (!hojaProductos || !hojaCotizaciones || !hojaDetalle) {
+      throw new Error('Falta alguna hoja del sistema.');
+    }
+
+    // 1. Cotización
+    const ultimaCot = hojaCotizaciones.getLastRow();
+
+    const cotizaciones = ultimaCot < 2 ? [] : hojaCotizaciones
+      .getRange(2, 1, ultimaCot - 1, 8)
+      .getValues();
+
+    const indiceCot = cotizaciones.findIndex(
+      fila => String(fila[0]).trim().toUpperCase() === numero
+    );
+
+    if (indiceCot === -1) {
+      throw new Error('No se encontró la cotización ' + numero);
+    }
+
+    const estadoActual = String(cotizaciones[indiceCot][6] || '').trim().toUpperCase();
+
+    if (estadoActual === 'ANULADO') {
+      throw new Error('Esta cotización ya está anulada.');
+    }
+
+    const estabaVendida = estadoActual === 'VENDIDO';
+
+    if (estabaVendida && !esAdmin) {
+      throw new Error('Solo la administradora puede anular una venta.');
+    }
+
+    let numeroVenta = '';
+    let filaVenta = -1;
+    let devoluciones = [];
+    let hojaVentas = null;
+
+    if (estabaVendida) {
+
+      // 2. Venta asociada
+      hojaVentas = ss.getSheetByName(NOMBRE_HOJA_VENTAS);
+
+      if (hojaVentas && hojaVentas.getLastRow() >= 2) {
+
+        const ventas = hojaVentas
+          .getRange(2, 1, hojaVentas.getLastRow() - 1, 8)
+          .getValues();
+
+        const indiceVenta = ventas.findIndex(fila =>
+          String(fila[2]).trim().toUpperCase() === numero &&
+          String(fila[7] || '').trim().toUpperCase() !== 'ANULADA'
+        );
+
+        if (indiceVenta !== -1) {
+          numeroVenta = String(ventas[indiceVenta][0]).trim();
+          filaVenta = indiceVenta + 2;
+        }
+      }
+
+      // 3. Cantidades a devolver
+      const ultimaDet = hojaDetalle.getLastRow();
+
+      const detalle = ultimaDet < 2 ? [] : hojaDetalle
+        .getRange(2, 1, ultimaDet - 1, 8)
+        .getValues()
+        .filter(fila => String(fila[0]).trim().toUpperCase() === numero);
+
+      const cantidadesPorId = {};
+
+      detalle.forEach(fila => {
+        const id = String(fila[1]).trim();
+        cantidadesPorId[id] = (cantidadesPorId[id] || 0) + Number(fila[5] || 0);
+      });
+
+      const productosBD = hojaProductos
+        .getRange(2, 1, hojaProductos.getLastRow() - 1, 7)
+        .getValues();
+
+      // Validar todo antes de escribir
+      devoluciones = Object.keys(cantidadesPorId).map(id => {
+
+        const indice = productosBD.findIndex(fila => String(fila[0]).trim() === id);
+
+        if (indice === -1) {
+          throw new Error(
+            'El producto con código ' + id +
+            ' ya no existe en PRODUCTOS. Restáuralo antes de anular.'
+          );
+        }
+
+        const producto = productosBD[indice];
+
+        return {
+          id: id,
+          nombre: producto[1] + ' ' + producto[3] + ' ' + producto[2],
+          cantidad: cantidadesPorId[id],
+          fila: indice + 2,
+          nuevoStock: (Number(producto[5]) || 0) + cantidadesPorId[id]
+        };
+      });
+
+      // 4. Devolver stock
+      devoluciones.forEach(d => {
+        hojaProductos.getRange(d.fila, 6).setValue(d.nuevoStock);
+      });
+
+      // 5. Marcar la venta como anulada
+      if (filaVenta !== -1) {
+        if (!hojaVentas.getRange(1, 8).getValue()) {
+          hojaVentas.getRange(1, 8).setValue('ESTADO');
+        }
+        hojaVentas.getRange(filaVenta, 8).setValue('ANULADA');
+      }
+    }
+
+    // 6. Marcar la cotización como anulada
+    hojaCotizaciones.getRange(indiceCot + 2, 7).setValue('ANULADO');
+
+    // 7. Registro de la anulación
+    const hojaAnulaciones = obtenerHojaAnulaciones(ss);
+
+    hojaAnulaciones.appendRow([
+      new Date(),
+      numero,
+      numeroVenta,
+      textoSeguro(motivo),
+      textoSeguro(sesion.nombre),
+      devoluciones.map(d => d.cantidad + ' x ' + d.nombre).join(', ')
+    ]);
+
+    SpreadsheetApp.flush();
+
+    return responderJSON({
+      ok: true,
+      anulacion: {
+        cotizacion: numero,
+        venta: numeroVenta,
+        stockDevuelto: devoluciones.map(d => ({ producto: d.nombre, cantidad: d.cantidad }))
+      }
+    });
+
+  } catch (error) {
+
+    return responderJSON({ ok: false, mensaje: error.message });
+
+  } finally {
+
+    lock.releaseLock();
+  }
+}
+
+
+function obtenerHojaAnulaciones(ss) {
+
+  let hoja = ss.getSheetByName(NOMBRE_HOJA_ANULACIONES);
+
+  if (!hoja) {
+    hoja = ss.insertSheet(NOMBRE_HOJA_ANULACIONES);
+    hoja.appendRow(['FECHA', 'COTIZACION', 'VENTA', 'MOTIVO', 'USUARIO', 'STOCK_DEVUELTO']);
+    hoja.setFrozenRows(1);
+  }
+
+  return hoja;
 }
 
 
