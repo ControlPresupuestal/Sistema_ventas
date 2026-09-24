@@ -8,6 +8,7 @@
   <title>ZAREINA | Cotización</title>
 
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/ventas.css">
 </head>
 
 
@@ -77,8 +78,24 @@
         Imagen
       </button>
 
+      <button
+        id="btnVender"
+        class="btn-cotizacion-principal btn-vender"
+        style="display:none;">
+        Registrar venta
+      </button>
+
     </div>
 
+
+
+    <!-- AVISO DE VENTA -->
+
+    <div
+      id="avisoVenta"
+      class="aviso-venta"
+      style="display:none;">
+    </div>
 
 
     <!-- DOCUMENTO -->
@@ -293,6 +310,54 @@
 
 
     </section>
+
+
+    <!-- VENTANA: REGISTRAR VENTA -->
+
+    <div
+      id="modalVenta"
+      class="modal-fondo"
+      style="display:none;">
+
+      <div class="modal-caja" role="dialog" aria-modal="true" aria-labelledby="tituloModalVenta">
+
+        <h3 id="tituloModalVenta">Registrar venta</h3>
+
+        <p class="modal-texto">
+          Se descontará el stock de los productos y la cotización
+          <strong id="modalNumero"></strong> quedará como <strong>VENDIDO</strong>.
+        </p>
+
+        <div class="modal-total">
+          <span>Total a cobrar</span>
+          <strong>S/ <span id="modalTotal">0.00</span></strong>
+        </div>
+
+        <label class="modal-label">Método de pago</label>
+
+        <div id="metodosPago" class="metodos-pago">
+          <button type="button" data-metodo="EFECTIVO">💵 Efectivo</button>
+          <button type="button" data-metodo="YAPE">📱 Yape</button>
+          <button type="button" data-metodo="PLIN">📱 Plin</button>
+          <button type="button" data-metodo="TRANSFERENCIA">🏦 Transferencia</button>
+          <button type="button" data-metodo="TARJETA">💳 Tarjeta</button>
+        </div>
+
+        <div id="modalError" class="modal-error"></div>
+
+        <div class="acciones-cotizacion">
+          <button id="btnCancelarVenta" class="btn-cotizacion-secundario">
+            Cancelar
+          </button>
+
+          <button id="btnConfirmarVenta" class="btn-cotizacion-principal" disabled>
+            Confirmar venta
+          </button>
+        </div>
+
+      </div>
+
+    </div>
 
 
     <!-- ERROR -->
