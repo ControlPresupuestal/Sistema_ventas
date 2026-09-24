@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZAREINA | Separados</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/historial.css">
+  <link rel="stylesheet" href="css/ventas.css">
+  <link rel="stylesheet" href="css/productos.css">
+  <link rel="stylesheet" href="css/clientes.css">
+  <link rel="stylesheet" href="css/operaciones.css">
+</head>
+
+<body class="dashboard-page">
+
+  <header class="topbar">
+    <div class="topbar-marca">
+      <span class="estrella">✦</span>
+      <div>
+        <h1>ZAREINA</h1>
+        <small>Moda que eleva tu esencia</small>
+      </div>
+    </div>
+
+    <div class="usuario-header">
+      <div class="usuario-info">
+        <strong id="nombreUsuario"></strong>
+        <span id="rolUsuario"></span>
+      </div>
+
+      <div id="avatarUsuario" class="avatar"></div>
+
+      <a href="dashboard.html" class="btn-volver">
+        ← Inicio
+      </a>
+    </div>
+  </header>
+
+
+  <main class="cotizacion-contenedor">
+
+    <section class="cotizacion-titulo">
+      <div>
+        <span class="etiqueta-zareina">VENTAS</span>
+        <h2>Separados</h2>
+        <p>Prendas con adelanto. Registra los pagos hasta completar el total.</p>
+      </div>
+    </section>
+
+
+    <section class="cotizacion-card historial-filtros clientes-filtros">
+
+      <div class="campo-producto historial-buscar">
+        <label for="buscar">Buscar</label>
+        <input id="buscar" type="search" placeholder="Cliente, número de separado o cotización" autocomplete="off">
+      </div>
+
+      <div class="campo-producto">
+        <label for="orden">Ordenar por</label>
+        <select id="orden">
+          <option value="antiguos">Más antiguos primero</option>
+          <option value="recientes">Más recientes primero</option>
+          <option value="saldo">Mayor saldo</option>
+        </select>
+      </div>
+
+      <button id="btnLimpiarFiltros" class="btn-cotizacion-secundario historial-limpiar">
+        Limpiar
+      </button>
+
+    </section>
+
+
+    <div id="pestanas" class="op-pestanas">
+      <button data-estado="PENDIENTE" class="activo">Pendientes <span id="nPendientes">0</span></button>
+      <button data-estado="COMPLETADO">Completados <span id="nCompletados">0</span></button>
+      <button data-estado="CANCELADO">Cancelados <span id="nCancelados">0</span></button>
+    </div>
+
+
+    <section class="historial-resumen">
+      <div>
+        <span>Separados pendientes</span>
+        <strong id="resumenPendientes">0</strong>
+      </div>
+      <div>
+        <span>Por cobrar</span>
+        <strong>S/ <span id="resumenSaldo">0.00</span></strong>
+      </div>
+    </section>
+
+
+    <div id="listaSeparados" class="sep-lista">
+      <div class="op-estado">Cargando separados...</div>
+    </div>
+
+
+    <!-- VENTANA: PAGO -->
+
+    <div id="modalPago" class="modal-fondo" style="display:none;">
+
+      <div class="modal-caja" role="dialog" aria-modal="true" aria-labelledby="tituloModalPago">
+
+        <h3 id="tituloModalPago">Registrar pago</h3>
+
+        <p id="textoPago" class="modal-texto"></p>
+
+        <label class="modal-label" for="montoPago">Monto (S/)</label>
+        <input id="montoPago" class="modal-campo" type="number" min="0" step="0.10" inputmode="decimal">
+
+        <label class="modal-label">Método de pago</label>
+
+        <div id="metodosPago" class="metodos-pago">
+          <button type="button" data-metodo="EFECTIVO">💵 Efectivo</button>
+          <button type="button" data-metodo="YAPE">📱 Yape</button>
+          <button type="button" data-metodo="PLIN">📱 Plin</button>
+          <button type="button" data-metodo="TRANSFERENCIA">🏦 Transferencia</button>
+          <button type="button" data-metodo="TARJETA">💳 Tarjeta</button>
+        </div>
+
+        <div id="errorPago" class="modal-error"></div>
+
+        <div class="acciones-cotizacion">
+          <button id="btnCancelarPago" class="btn-cotizacion-secundario" type="button">Cancelar</button>
+          <button id="btnConfirmarPago" class="btn-cotizacion-principal" type="button" disabled>Registrar pago</button>
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- VENTANA: CANCELAR SEPARADO -->
+
+    <div id="modalCancelar" class="modal-fondo" style="display:none;">
+
+      <div class="modal-caja" role="dialog" aria-modal="true" aria-labelledby="tituloModalCancelar">
+
+        <h3 id="tituloModalCancelar">Cancelar separado</h3>
+
+        <p id="textoCancelar" class="modal-texto"></p>
+
+        <label class="modal-label" for="motivoCancelar">Motivo</label>
+        <textarea id="motivoCancelar" class="modal-motivo" rows="3" maxlength="200" placeholder="Ej. La clienta no volvió en el plazo acordado"></textarea>
+
+        <div id="errorCancelar" class="modal-error"></div>
+
+        <div class="acciones-cotizacion">
+          <button id="btnVolverCancelar" class="btn-cotizacion-secundario" type="button">Volver</button>
+          <button id="btnConfirmarCancelar" class="btn-cotizacion-principal btn-peligro" type="button" disabled>Cancelar separado</button>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <script src="js/separados.js"></script>
+
+</body>
+</html>
