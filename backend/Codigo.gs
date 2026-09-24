@@ -28,6 +28,10 @@ function doGet(e) {
     return obtenerCotizacion(p);
   }
 
+  if (accion === 'cotizaciones') {
+    return listarCotizaciones(p);
+  }
+
   if (accion === 'login' || accion === 'guardarcotizacion') {
     return responderJSON({
       ok: false,
@@ -600,6 +604,62 @@ function obtenerCotizacion(p) {
       productos: productos
     }
   });
+}
+
+
+// ======================================================
+// HISTORIAL DE COTIZACIONES  (requiere sesión)
+// ======================================================
+
+function listarCotizaciones(p) {
+
+  if (!validarSesion(p.token)) {
+    return respuestaSesionVencida();
+  }
+
+  const hoja = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName(NOMBRE_HOJA_COTIZACIONES);
+
+  if (!hoja) {
+    return responderJSON({
+      ok: false,
+      mensaje: 'No existe la hoja COTIZACIONES.'
+    });
+  }
+
+  const ultimaFila = hoja.getLastRow();
+
+  if (ultimaFila < 2) {
+    return responderJSON({ ok: true, cotizaciones: [] });
+  }
+
+  const zona = Session.getScriptTimeZone();
+
+  const cotizaciones = hoja
+    .getRange(2, 1, ultimaFila - 1, Math.max(hoja.getLastColumn(), 8))
+    .getValues()
+    .filter(fila => String(fila[0]).trim())
+    .map(fila => {
+
+      const fecha = fila[1] instanceof Date ? fila[1] : new Date(fila[1]);
+      const fechaValida = !isNaN(fecha.getTime());
+
+      return {
+        numero: String(fila[0]).trim(),
+        fecha: fechaValida ? Utilities.formatDate(fecha, zona, 'dd/MM/yyyy') : String(fila[1]),
+        fechaISO: fechaValida ? Utilities.formatDate(fecha, zona, 'yyyy-MM-dd') : '',
+        cliente: String(fila[2]),
+        subtotal: Number(fila[3]) || 0,
+        descuento: Number(fila[4]) || 0,
+        total: Number(fila[5]) || 0,
+        estado: String(fila[6] || '').trim(),
+        usuario: String(fila[7] || '').trim()
+      };
+    })
+    .reverse(); // más recientes primero
+
+  return responderJSON({ ok: true, cotizaciones: cotizaciones });
 }
 
 
