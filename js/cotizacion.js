@@ -16,28 +16,21 @@ const sesion =
   );
 
 
-if (!sesion) {
-  window.location.href =
-    "index.html";
-}
-
-
 const usuario =
-  JSON.parse(sesion);
+  sesion ? JSON.parse(sesion) : null;
 
 
-if (!usuario.token) {
+if (!usuario || !usuario.token) {
 
   sessionStorage.removeItem(
     "zareinaUsuario"
   );
 
-  alert(
-    "Debes iniciar sesión nuevamente."
+  window.location.replace(
+    "index.html"
   );
 
-  window.location.href =
-    "index.html";
+  throw new Error("Sin sesión");
 }
 
 
@@ -826,10 +819,18 @@ async function guardarCotizacion() {
   }
 
 
+  const subtotalActual =
+    detalle.reduce(
+      (suma, item) =>
+        suma + item.cantidad * item.precio,
+      0
+    );
+
   const descuento =
-    Number(
-      descuentoInput.value
-    ) || 0;
+    Math.min(
+      Math.max(Number(descuentoInput.value) || 0, 0),
+      subtotalActual
+    );
 
 
   btnGuardar.disabled =
@@ -842,19 +843,17 @@ async function guardarCotizacion() {
 
   try {
 
-    const parametros =
-  new URLSearchParams({
-    accion: "guardarCotizacion",
-    token: usuario.token,
-    cliente: cliente,
-    descuento: descuento.toString(),
-    productos: JSON.stringify(detalle)
-  });
-
-const respuesta =
-  await fetch(
-    `${API_URL}?${parametros.toString()}`
-  );
+    const respuesta =
+      await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          accion: "guardarCotizacion",
+          token: usuario.token,
+          cliente: cliente,
+          descuento: descuento,
+          productos: detalle
+        })
+      });
 
     const datos =
       await respuesta.json();
@@ -898,25 +897,7 @@ const respuesta =
 
 
     window.location.href =
-  `vista-cotizacion.html?numero=${encodeURIComponent(cotizacion.numero)}`;
-
-    return;
-
-    document
-      .querySelector(
-        ".cotizacion-numero strong"
-      )
-      .textContent =
-        cotizacion.numero;
-
-
-    btnGuardar.textContent =
-      "Cotización Guardada ✓";
-
-
-    btnGuardar.disabled =
-      true;
-
+      `vista-cotizacion.html?numero=${encodeURIComponent(cotizacion.numero)}`;
 
   } catch (error) {
 
