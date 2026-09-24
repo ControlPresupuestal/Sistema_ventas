@@ -137,6 +137,8 @@ async function cargarCotizacion(numero) {
     numeroCargado =
       datos.cotizacion.numero;
 
+    prepararVenta(datos.cotizacion);
+
     btnPDF.disabled = false;
     btnImagen.disabled = false;
 
@@ -611,6 +613,155 @@ btnPDF.addEventListener(
     }
   )
 );
+
+
+
+// ======================================================
+// REGISTRAR VENTA
+// ======================================================
+
+const btnVender = document.getElementById("btnVender");
+const modalVenta = document.getElementById("modalVenta");
+const btnConfirmarVenta = document.getElementById("btnConfirmarVenta");
+const modalError = document.getElementById("modalError");
+
+let metodoElegido = "";
+let enviandoVenta = false;
+
+
+function prepararVenta(cotizacion) {
+
+  const estado = String(cotizacion.estado || "").trim().toUpperCase();
+
+  document.getElementById("modalNumero").textContent = cotizacion.numero;
+  document.getElementById("modalTotal").textContent = Number(cotizacion.total).toFixed(2);
+
+  btnVender.style.display =
+    estado === "VENDIDO" || estado === "ANULADO" ? "none" : "inline-flex";
+}
+
+
+function abrirModalVenta() {
+
+  metodoElegido = "";
+  modalError.textContent = "";
+  btnConfirmarVenta.disabled = true;
+  btnConfirmarVenta.textContent = "Confirmar venta";
+
+  document
+    .querySelectorAll("#metodosPago button")
+    .forEach(b => b.classList.remove("activo"));
+
+  modalVenta.style.display = "flex";
+}
+
+
+function cerrarModalVenta() {
+
+  if (enviandoVenta) return;
+
+  modalVenta.style.display = "none";
+}
+
+
+btnVender.addEventListener("click", abrirModalVenta);
+
+document.getElementById("btnCancelarVenta").addEventListener("click", cerrarModalVenta);
+
+modalVenta.addEventListener("click", (event) => {
+  if (event.target === modalVenta) cerrarModalVenta();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && modalVenta.style.display !== "none") cerrarModalVenta();
+});
+
+document.getElementById("metodosPago").addEventListener("click", (event) => {
+
+  const boton = event.target.closest("button[data-metodo]");
+
+  if (!boton || enviandoVenta) return;
+
+  document
+    .querySelectorAll("#metodosPago button")
+    .forEach(b => b.classList.toggle("activo", b === boton));
+
+  metodoElegido = boton.dataset.metodo;
+  btnConfirmarVenta.disabled = false;
+});
+
+
+btnConfirmarVenta.addEventListener("click", async () => {
+
+  if (!metodoElegido || enviandoVenta) return;
+
+  enviandoVenta = true;
+  btnConfirmarVenta.disabled = true;
+  btnConfirmarVenta.textContent = "Registrando...";
+  modalError.textContent = "";
+
+  try {
+
+    const respuesta = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        accion: "registrarVenta",
+        token: usuario.token,
+        numero: numeroCargado,
+        metodoPago: metodoElegido
+      })
+    });
+
+    const datos = await respuesta.json();
+
+    if (!datos.ok) {
+
+      if (datos.sesionExpirada) {
+        sessionStorage.removeItem("zareinaUsuario");
+        alert(datos.mensaje);
+        window.location.replace("index.html");
+        return;
+      }
+
+      throw new Error(datos.mensaje);
+    }
+
+    const venta = datos.venta;
+
+    enviandoVenta = false;
+    cerrarModalVenta();
+
+    document.getElementById("estadoCotizacion").textContent = "VENDIDO";
+    btnVender.style.display = "none";
+
+    const aviso = document.getElementById("avisoVenta");
+
+    aviso.innerHTML = `
+      <strong>✓ Venta ${escaparHTML(venta.numero)} registrada</strong>
+      <span>
+        ${escaparHTML(venta.metodoPago)} · S/ ${Number(venta.total).toFixed(2)} ·
+        el stock ya fue descontado.
+      </span>
+      <a href="ventas.html">Ver ventas →</a>
+    `;
+
+    aviso.style.display = "flex";
+
+    aviso.scrollIntoView({ behavior: "smooth", block: "center" });
+
+  } catch (error) {
+
+    console.error(error);
+
+    modalError.textContent = error.message || "No se pudo registrar la venta.";
+    btnConfirmarVenta.disabled = false;
+    btnConfirmarVenta.textContent = "Confirmar venta";
+
+  } finally {
+
+    enviandoVenta = false;
+  }
+});
 
 
 
